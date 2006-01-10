@@ -132,6 +132,7 @@
 ;; * Improve support for svn blame
 ;; * Get rid of all byte-compiler warnings
 ;; * SVK working copy support
+;;    - defcustom a few variables
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
