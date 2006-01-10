@@ -1,7 +1,14 @@
 ;;; psvn-svk.el --- SVK support for psvn.el / Emacs
-;; Copyright (C) 2002-2005 by Stefan Reichoer & intrigeri
+;; Copyright (C) 2002-2006 by Stefan Reichoer
 
-;; Author: intrigeri <intrigeri@boum.org>
+;; Authors:
+;;   - Stefan Reichoer, <stefan@xsteve.at>
+;;   - Ben Voui, <intrigeri@boum.org>
+
+;; Contains some code from VC, under GPL:
+;;   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002,
+;;   2003, 2004, 2005, 2006 Free Software Foundation, Inc.
+
 ;; $Id$
 ;; $URL$
 
@@ -22,21 +29,15 @@
 
 ;; TODO ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; * svn-svk-status-show-svn-log should work on selected files
-;; * quote some arguments for the shell (filenames as args, filenames as
-;;   svn:ignore, etc.) ? VC does not... should we?
-;; * implement status-get-specific-revision-internal
-;; * the functions using svn-status-get-specific-revision-internal can not work,
-;;   since it needs svn-wc-adm-dir-name (.svn) that was obviously removed:
-;;     - svn-status-get-specific-revision
-;;     - svn-status-ediff-with-revision
-;; * some functions can not work since they use --targets, which does not
-;;   exist in SVK 1.06; quite easy to fix, though
-;; * 'svk export' does not exist; replace it by copy?
-;; * svnversion has no SVK equivalent; emulate it?
+;; * implement status-get-specific-revision-internal; it's needed so that
+;;   svn-status-get-specific-revision, svn-status-ediff-with-revision et al. can
+;;   work
+;; * 'svn export' has no SVK equivalent; emulate it?
+;; * 'svnversion' has no SVK equivalent; emulate it?
 ;; * svn-svk-status-base-dir: find the base checkout dir instead of cheating
-;; * add SVK functions that SVN does not support
+;; * svn-svk-status-show-svn-log should work on selected files
 ;; * use great ideas from vc-svk-co-* functions
+;; * add SVK functions that SVN does not support
 ;; * submit SVK bug report for it's management of filenames starting with '++'.
 
 

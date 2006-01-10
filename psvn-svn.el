@@ -1,5 +1,5 @@
 ;;; psvn-svn.el --- Subversion support for psvn.el / Emacs
-;; Copyright (C) 2002-2005 by Stefan Reichoer & intrigeri
+;; Copyright (C) 2002-2006 by Stefan Reichoer
 
 ;; Authors:
 ;;   - Stefan Reichoer, <stefan@xsteve.at>
@@ -7,7 +7,7 @@
 
 ;; Contains some code from VC, under GPL:
 ;;   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002,
-;;   2003, 2004, 2005 Free Software Foundation, Inc.
+;;   2003, 2004, 2005, 2006 Free Software Foundation, Inc.
 
 ;; $Id$
 ;; $URL$

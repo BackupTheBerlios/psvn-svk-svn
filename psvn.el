@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2005 by Stefan Reichoer
+;; Copyright (C) 2002-2006 by Stefan Reichoer
 
 ;; Authors:
 ;;   - Stefan Reichoer, <stefan@xsteve.at>
@@ -7,7 +7,7 @@
 
 ;; Contains some code from VC, under GPL:
 ;;   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002,
-;;   2003, 2004, 2005 Free Software Foundation, Inc.
+;;   2003, 2004, 2005, 2006 Free Software Foundation, Inc.
 
 ;; $Id$
 ;; $URL$
@@ -139,10 +139,13 @@
 ;;         svn-status-parse-commit-output stuff
 ;;       . add svn-log-edit-erase-edit-buffer to svn-process-sentinel?
 ;;    - defcustom a few variables
+;;    - get rid of --targets option, which does not exist in SVK 1.06
 ;; * backend dispatching functions: better behaviour when a backend does not
 ;;   implement a function
 ;; * use the backend dispatching system for any function that builds/runs a
-;;   command line, even for functions currently shared by SVN and SVK
+;;   command line
+;; * quote some arguments for the shell (filenames as args, filenames as
+;;   svn:ignore, etc.) ? see how VC does... or not.
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
