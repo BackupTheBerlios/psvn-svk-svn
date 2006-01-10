@@ -514,6 +514,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-root-return-info nil)
 (defvar svn-status-property-edit-must-match-flag nil)
 (defvar svn-status-propedit-property-name nil)
+(defvar svn-status-propedit-property-value nil)
 (defvar svn-status-propedit-file-list nil)
 (defvar svn-status-mode-line-process "")
 (defvar svn-status-mode-line-process-status "")
@@ -846,6 +847,8 @@ and else calls
 
 It is usually called via the `svn-call' macro."
   (let ((f (assoc function-name (get backend 'svn-functions))))
+    (message "Applying %s (%s) for %s on args %S" function-name f backend args )
+    (sit-for 4)
     (if f (setq f (cdr f))
       (setq f (svn-find-backend-function backend function-name))
       (push (cons function-name f) (get backend 'svn-functions)))
@@ -856,10 +859,10 @@ It is usually called via the `svn-call' macro."
      (t		(apply f args)))))
 
 (defmacro svn-call (fun file &rest args)
-  ;; BEWARE!! `file' is evaluated twice!!
-  (or (and file
-           `(svn-call-backend (svn-backend ,file) ',fun ,@args))
-      `(svn-call-backend (svn-backend ,default-directory) ',fun ,@args)))
+  ;; BEWARE!! `file' is evaluated three times
+  `(or (and ,file
+            (svn-call-backend (svn-backend ,file) ',fun ,@args))
+       (svn-call-backend (svn-backend ,default-directory) ',fun ,@args)))
 
 ;; Access functions to file properties
 
@@ -2210,6 +2213,7 @@ When called with a prefix argument run 'svn status -vu'."
       (set-buffer "*svn-process*")
       (setq svn-status-update-previous-process-output
             (buffer-substring (point-min) (point-max)))))
+  (svn-status-message 7 "svn-status-update: going to run svn-status with args %s %s" default-directory arg )
   (svn-status default-directory arg))
 
 (defun svn-status-get-line-information ()
@@ -3723,8 +3727,9 @@ When called with a prefix argument, ask the user for the revision."
 ;; svn status persistent options
 ;; --------------------------------------------------------------------------------
 
-(defun svn-status-base-dir ()
-  (svn-call status-base-dir nil))
+(defun svn-status-base-dir (&optional file)
+  (svn-status-message 7 "Running svn-status-base-dir with arg %s" file)
+  (svn-call status-base-dir file))
 
 (defun svn-status-save-state ()
   (interactive)

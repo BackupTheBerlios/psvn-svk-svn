@@ -31,7 +31,7 @@
   "Return true if FILE is registered under Subversion."
   ;; a quick false positive test: is there a `.svn/entries' file?
   (file-exists-p (expand-file-name (concat (svn-svn-wc-adm-dir-name) "/entries")
-                                   (file-name-directory file))))
+                                   (file-name-directory (concat file "/")))))
 
 ;; named after SVN_WC_ADM_DIR_NAME in svn_wc.h
 (defun svn-svn-wc-adm-dir-name ()
@@ -157,8 +157,9 @@ is prompted for give extra arguments, which are appended to ARGLIST."
 ;; status persistent options
 ;; --------------------------------------------------------------------------------
 
-(defun svn-svn-status-base-dir (&optional dir)
-  (let ((base-dir (or dir (expand-file-name default-directory)))
+(defun svn-svn-status-base-dir (&optional file)
+  (let ((base-dir (or (and file (file-name-directory (concat file "/")))
+                      (expand-file-name default-directory)))
         (dot-svn-dir)
         (dir-below (expand-file-name default-directory)))
     (setq dot-svn-dir (concat base-dir (svn-svn-wc-adm-dir-name)))

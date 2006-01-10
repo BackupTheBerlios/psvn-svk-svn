@@ -158,7 +158,8 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
-              (svn-status-update-mode-line)))))
+              (svn-status-update-mode-line)
+              ))))
     (error "You can only run one svk process at once!")))
 
 
@@ -216,8 +217,9 @@ subdirectory. That's for the full `svn-svk-registered' to decide."
 ;; status persistent options
 ;; --------------------------------------------------------------------------------
 
-(defun svn-svk-status-base-dir (&optional dir)
-  (setq base-dir (or dir (expand-file-name default-directory))))
+(defun svn-svk-status-base-dir (&optional file)
+  (setq base-dir (or (and file (file-name-directory (concat file "/")))
+                     (expand-file-name default-directory))))
 
 (provide 'psvn-svk)
 
