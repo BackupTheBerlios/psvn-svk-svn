@@ -191,6 +191,10 @@
 ;; impossible to abuse, as the commands that read them are used only in
 ;; buffers that are not visiting any files.  Better safe than sorry.
 
+;; Functions that should be supported by backends (calle svn-BACKEND-FUNC):
+;; * status
+;; * registered
+
 ;;; Code:
 
 (require 'easymenu)
@@ -915,8 +919,8 @@ inside loops."
 (defvar svn-status-display-new-status-buffer nil)
 
 (defun svn-status (dir &optional arg)
-  "Examine the status of Subversion working copy in directory DIR.
-If ARG then update the working copy first (unsupported by SVK)."
+  "Examine the status of a working copy in directory DIR.
+If ARG then also update the working copy, if supported by the backend."
   (interactive (list (svn-read-directory-name "Status directory: "
                                               nil default-directory nil)
                      current-prefix-arg))
