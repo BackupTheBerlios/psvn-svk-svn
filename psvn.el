@@ -823,7 +823,7 @@ Calls
 
     (apply 'svn-BACKEND-FUN ARGS)
 
-if svn-BACKEND-FUN exists (after trying to find it in svn-BACKEND.el)
+if svn-BACKEND-FUN exists (after trying to find it in psvn-BACKEND.el)
 and else calls
 
     (apply 'svn-default-FUN BACKEND ARGS)
