@@ -163,6 +163,16 @@ is prompted for give extra arguments, which are appended to ARGLIST."
               ))))
     (error "You can only run one svk process at once!")))
 
+(defun svn-svk-status-parse-info-result ()
+  (let ((url))
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (goto-char (point-min))
+      (let ((case-fold-search t))
+        (search-forward "Depot Path: "))
+      (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
+    (setq svn-status-base-info `((url ,url)))))
+
 (defun svn-svk-status-parse-ar-output ()
   "Parse the output of svk add|remove.
 Return a list that is suitable for `svn-status-update-with-command-list'"

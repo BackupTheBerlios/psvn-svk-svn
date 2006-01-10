@@ -2113,14 +2113,7 @@ non-interactive use."
     (svn-status-update-buffer)))
 
 (defun svn-status-parse-info-result ()
-  (let ((url))
-    (save-excursion
-      (set-buffer "*svn-process*")
-      (goto-char (point-min))
-      (let ((case-fold-search t))
-        (search-forward "url: "))
-      (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
-    (setq svn-status-base-info `((url ,url)))))
+  (svn-call status-parse-info-result nil))
 
 (defun svn-status-base-info->url ()
   (if svn-status-base-info
