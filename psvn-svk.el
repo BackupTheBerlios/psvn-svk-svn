@@ -60,10 +60,7 @@
   (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
-  (if (not
-       (string-match
-	"^Checkout Path:"
-	(shell-command-to-string (concat "svk info " (expand-file-name dir)))))
+  (if (not (svn-svk-registered dir))
       (when (y-or-n-p
              (concat dir " does not seem to be a SVK working copy. "
                      "Run dired instead? "))
