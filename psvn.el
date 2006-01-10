@@ -1,8 +1,14 @@
 ;;; psvn.el --- Subversion interface for emacs
 ;; Copyright (C) 2002-2005 by Stefan Reichoer
 
-;; Author: Stefan Reichoer, <stefan@xsteve.at>
-;; $Id: psvn.el 17982 2006-01-04 21:01:27Z xsteve $
+;; Authors:
+;;   - Stefan Reichoer, <stefan@xsteve.at>
+;;   - Ben Voui, <intrigeri@boum.org>
+;; Contains some code from VC, under GPL:
+;;   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
+;; $Id$
+;; $URL$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -188,6 +194,15 @@
 (require 'diff-mode nil t)
 
 ;;; user setable variables
+(defcustom svn-handled-backends '(SVN SVK)
+  "*List of version control backends for which psvn will be used.
+Entries in this list will be tried in order to determine whether a
+file is under that sort of version control.
+Removing an entry from the list prevents psvn from being activated
+when visiting a file managed by that backend.
+An empty list disables psvn altogether."
+  :type '(repeat symbol)
+  :group 'psvn)
 (defcustom svn-status-verbose t
   "*Add '-v' to svn status call."
   :type 'boolean
