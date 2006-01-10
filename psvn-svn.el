@@ -43,8 +43,7 @@
 
 ;;;###autoload
 (defun svn-svn-status (dir &optional arg)
-  "Examine the status of Subversion working copy in directory DIR.
-If ARG then pass the -u argument to `svn status'."
+  "Implementation of `svn-status' for the SVN backend."
   (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
@@ -81,22 +80,7 @@ If ARG then pass the -u argument to `svn status'."
         (svn-svn-run t t 'status "status" status-option)))))
 
 (defun svn-svn-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
-  "Run svn with arguments ARGLIST.
-
-If RUN-ASYNCHRON is t then run svn asynchronously.
-
-If CLEAR-PROCESS-BUFFER is t then erase the contents of the
-*svn-process* buffer before commencing.
-
-CMDTYPE is a symbol such as 'mv, 'revert, or 'add, representing the
-command to run.
-
-ARGLIST is a list of arguments \(which must include the command name,
-for example: '(\"revert\" \"file1\"\)
-ARGLIST is flattened and any every nil value is discarded.
-
-If the variable `svn-status-edit-svn-command' is non-nil then the user
-is prompted for give extra arguments, which are appended to ARGLIST."
+  "Implementation of `svn-run' for the SVN backend."
   (setq arglist (svn-status-flatten-list arglist))
   (if (eq (process-status "svn") nil)
       (progn
@@ -155,8 +139,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
     (error "You can only run one svn process at once!")))
 
 (defun svn-svn-status-parse-ar-output ()
-  "Parse the output of svn add|remove.
-Return a list that is suitable for `svn-status-update-with-command-list'"
+  "Implementation of `svn-status-parse-ar-output' for the SVN backend."
   (save-excursion
     (set-buffer "*svn-process*")
     (let ((action)
@@ -185,6 +168,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
 
 (defun svn-svn-status-parse-info-result ()
+  "Implementation of `svn-status-parse-info-result' for the SVN backend."
   (let ((url))
     (save-excursion
       (set-buffer "*svn-process*")
@@ -195,15 +179,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
     (setq svn-status-base-info `((url ,url)))))
 
 (defun svn-svn-status-show-svn-log (arg)
-  "Run `svn log' on selected files.
-The output is put into the *svn-log* buffer
-The optional prefix argument ARG determines which switches are passed to `svn log':
- no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
- prefix argument of -1   --- use no arguments
- prefix argument of 0:   --- use the -q switch (quiet)
- other prefix arguments: --- use the -v switch (verbose)
-
-See `svn-status-marked-files' for what counts as selected."
+  "Implementation of `svn-status-show-svn-log' for the SVN backend."
   (let ((switches (cond ((eq arg 0)  '("-q"))
                         ((eq arg -1) '())
                         (arg         '("-v"))
@@ -215,9 +191,7 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-log-view-mode))))
 
 (defun svn-svn-status-rm (force)
-  "Run `svn rm' on all selected files.
-See `svn-status-marked-files' for what counts as selected.
-When called with a prefix argument add the command line switch --force."
+  "Implementation of `svn-status-rm' for the SVN backend."
   (let* ((marked-files (svn-status-marked-files))
          (num-of-files (length marked-files)))
     (when (yes-or-no-p
@@ -230,8 +204,13 @@ When called with a prefix argument add the command line switch --force."
           (svn-svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
         (svn-svn-run t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
+(defun svn-svn-status-export (src dst)
+  "Implementation of `svn-status-export' for the SVN backend."
+  (svn-svn-run t t 'export "export" src dst)
+  (message "svn-status-export %s %s" src dest))
+
 (defun svn-svn-status-get-specific-revision-internal (line-infos revision)
-  "Implements svn-status-get-specific-revision-internal for SVN backend."
+  "Implementation of `svn-status-get-specific-revision-internal' for the SVN backend."
   ;; In `svn-status-show-svn-diff-internal', there is a comment
   ;; that REVISION `nil' might mean omitting the -r option entirely.
   ;; That doesn't seem like a good idea with svn cat.
@@ -300,7 +279,7 @@ When called with a prefix argument add the command line switch --force."
            svn-status-get-specific-revision-file-info))
 
 (defun svn-svn-status-svnversion ()
-  "Run svnversion on the directory that contains the file at point."
+  "Implementation of `svn-status-svnversion' for the SVN backend."  
   (svn-status-ensure-cursor-on-file)
   (let ((simple-path (svn-status-line-info->filename (svn-status-get-line-information)))
         (full-path (svn-status-line-info->full-path (svn-status-get-line-information)))
@@ -317,6 +296,7 @@ When called with a prefix argument add the command line switch --force."
 ;; --------------------------------------------------------------------------------
 
 (defun svn-svn-status-base-dir (&optional file)
+  "Implementation of `svn-status-base-dir' for the SVN backend."
   (let ((base-dir (or (and file (file-name-directory (concat file "/")))
                       (expand-file-name default-directory)))
         (dot-svn-dir)

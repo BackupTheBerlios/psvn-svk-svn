@@ -205,25 +205,32 @@
 ;; Some functions (called svn-FUNC) actually use svn-call to run either:
 ;; * the backend-specific (svn-BACKEND-FUNC) function, if it exists
 ;; * or svn-default-FUNC, as fallback.
-;; Functions that have to be implemented by every backend,
-;; since there is no default implementation:
+;; Functions that have to be implemented by every backend for psvn to work:
 ;; * registered
-;; * status
 ;; * run
-;; * status-show-svn-log
+;; * status
 ;; * status-base-dir
+;; * status-show-svn-log
 ;; * status-parse-ar-output
 ;; * status-parse-info-result
-;; * status-rm
-;; Functions that can optionnally be overriden by backends,
+;; * status-get-specific-revision-internal
+;; Functions that can optionally be overriden by backends,
 ;; in case the default implementation does not suit them:
 ;; * status-info
-;; * status-cleanup
-;; * status-make-directory
 ;; * status-add-file-recursively
 ;; * status-add-file
+;; * status-blame
+;; * status-show-svn-diff-internal
+;; * status-mv
 ;; * status-revert
+;; * status-make-directory
+;; * status-cleanup
 ;; * status-update-cmd
+;; Functions that have to be implemented by every backend that intends to
+;; support them, since there is no default implementation:
+;; * status-rm
+;; * status-export
+;; * status-svnversion
 
 ;;; Code:
 
@@ -2603,12 +2610,11 @@ See `svn-status-marked-files' for what counts as selected."
   (interactive)
   (svn-call status-info nil))
 
-;; Todo: add possiblity to specify the revision
 (defun svn-status-blame ()
-  "Run `svn blame' on the current file."
+  "Display per-line revision and author info."
+  ;; Todo: add possiblity to specify the revision
   (interactive)
-  ;;(svn-run t t 'blame "blame" "-r" "BASE" (svn-status-line-info->filename (svn-status-get-line-information))))
-  (svn-run t t 'blame "blame" "--" (svn-status-line-info->filename (svn-status-get-line-information))))
+  (svn-call status-blame))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -2641,41 +2647,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   ;; - `:auto': use "HEAD" if an update is known to exist, "BASE" otherwise.
   ;; In the future, `nil' might mean omit the -r option entirely;
   ;; but that currently seems to imply "BASE", so we just use that.
-  (when (eq revision :ask)
-    (setq revision (svn-status-read-revision-string
-                    "Diff with files for version: " "PREV")))
-
-  (let ((clear-buf t)
-        (beginning nil))
-    (dolist (line-info line-infos)
-      (svn-run nil clear-buf 'diff "diff" svn-status-default-diff-arguments
-                   "-r" (if (eq revision :auto)
-                            (if (svn-status-line-info->update-available line-info)
-                                "HEAD" "BASE")
-                          revision)
-                   (unless recursive "--non-recursive")
-                   "--"
-                   (svn-status-line-info->filename line-info))
-      (setq clear-buf nil)
-
-      ;; "svn diff --non-recursive" skips only subdirectories, not files.
-      ;; But a non-recursive diff via psvn should skip files too, because
-      ;; the user would have marked them if he wanted them to be compared.
-      ;; So we'll look for the "Index: foo" line that marks the first file
-      ;; in the diff output, and delete it and everything that follows.
-      ;; This is made more complicated by the fact that `svn-status-activate-diff-mode'
-      ;; expects the output to be left in the *svn-process* buffer.
-      (unless recursive
-        ;; Check `directory-p' relative to the `default-directory' of the
-        ;; "*svn-status*" buffer, not that of the "*svn-process*" buffer.
-        (let ((directory-p (svn-status-line-info->directory-p line-info)))
-          (with-current-buffer "*svn-process*"
-            (when directory-p
-              (goto-char (or beginning (point-min)))
-              (when (re-search-forward "^Index: " nil t)
-                (delete-region (match-beginning 0) (point-max))))
-            (goto-char (setq beginning (point-max))))))))
-  (svn-status-activate-diff-mode))
+  (svn-call svn-status-show-svn-diff-internal nil line-infos recursive revision))
 
 (defun svn-status-diff-save-current-defun-as-kill ()
   "Copy the function name for the change at point to the kill-ring.
@@ -2740,7 +2712,7 @@ When this function is called with a prefix argument, use the actual file instead
 ;;TODO: write a svn-status-cp similar to this---maybe a common
 ;;function to do both?
 (defun svn-status-mv ()
-  "Prompt for a destination, and `svn mv' selected files there.
+  "Prompt for a destination, and move selected files there.
 See `svn-status-marked-files' for what counts as `selected'.
 
 If one file was selected then the destination DEST should be a
@@ -2756,6 +2728,158 @@ doesn't check for that.
 SOLUTION: for each dir, umark all its contents (but not the dir
 itself) before running mv."
   (interactive)
+  (svn-call status-mv))
+
+(defun svn-status-revert ()
+  "Revert non-committed changes on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (interactive)
+  (svn-call status-revert nil))
+
+(defun svn-status-rm (force)
+  "Remove selected files from version control.
+See `svn-status-marked-files' for what counts as selected.
+When called with a prefix argument, use the --force option if the backend
+supports it."
+  (interactive "P")
+  (svn-call status-rm nil force))
+
+(defun svn-status-update-cmd ()
+  "Bring changes from the repository into the working copy."
+  (interactive)
+  (svn-call status-update-cmd nil))
+  (message "Running `svn update' for %s" default-directory)
+
+(defun svn-status-commit ()
+  "Commit selected files.
+If some files have been marked, commit those non-recursively;
+this is because marking a directory with \\[svn-status-set-user-mark]
+normally marks all of its files as well.
+If no files have been marked, commit recursively the file at point."
+  (interactive)
+  (let* ((selected-files (svn-status-marked-files))
+         (marked-files-p (svn-status-some-files-marked-p)))
+    (setq svn-status-files-to-commit selected-files
+          svn-status-recursive-commit (not marked-files-p))
+    (svn-log-edit-show-files-to-commit)
+    (svn-status-pop-to-commit-buffer)
+    (when svn-log-edit-insert-files-to-commit
+      (svn-log-edit-insert-files-to-commit))))
+
+(defun svn-status-pop-to-commit-buffer ()
+  (interactive)
+  (setq svn-status-pre-commit-window-configuration (current-window-configuration))
+  (let* ((use-existing-buffer (get-buffer "*svn-log-edit*"))
+         (commit-buffer (get-buffer-create "*svn-log-edit*"))
+         (dir default-directory))
+    (pop-to-buffer commit-buffer)
+    (setq default-directory dir)
+    (unless use-existing-buffer
+      (when (and svn-log-edit-file-name (file-readable-p svn-log-edit-file-name))
+        (insert-file-contents svn-log-edit-file-name)))
+    (svn-log-edit-mode)))
+
+(defun svn-status-export ()
+  "Export the current working copy to an unversioned directory.
+Ask the user for the destination path.
+`svn-status-default-export-directory' is suggested as export directory."
+  (interactive)
+  (let* ((src default-directory)
+         (dir1-name (nth 1 (nreverse (split-string src "/"))))
+         (dest (read-file-name (format "Export %s to " src) (concat svn-status-default-export-directory dir1-name))))
+    (svn-call status-export nil (expand-file-name src) (expand-file-name dest))))
+
+(defun svn-status-cleanup (arg)
+  "Clean up selected files, by removing locks, etc.
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
+  (interactive "P")
+  (svn-call status-cleanup nil))
+
+(defun svn-status-resolved ()
+  "Run `svn resolved' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (interactive)
+  (let* ((marked-files (svn-status-marked-files))
+         (num-of-files (length marked-files)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "Resolve %s? " (svn-status-line-info->filename (car marked-files)))
+             (format "Resolve %d files? " num-of-files)))
+      (message "resolving: %S" (svn-status-marked-file-names))
+      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+      (svn-run t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
+
+(defun svn-status-svnversion ()
+  "Produce a compact \"version number\" for the directory that contains
+the file at point."
+  (interactive)
+  (svn-call status-svnversion nil))
+
+;; --- default implementation for functions that may be overriden by backends
+
+(defun svn-default-status-info ()
+  "Default implementation of svn-status-info."
+  (let ((file-names (svn-status-marked-file-names)))
+    (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
+
+(defun svn-default-status-add-file-recursively (arg)
+  "Default implementation of svn-status-add-file-recursively."
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
+    (message "adding: %s"  (mapconcat 'identity file-names ", "))
+    (svn-run t t 'add "add" "--" file-names)))
+
+(defun svn-default-status-add-file (arg)
+  "Default implementation of svn-status-add-file."
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
+    (message "adding: %s" (mapconcat 'identity file-names ", "))
+    (svn-run t t 'add "add" "--non-recursive" "--" file-names)))
+
+(defun svn-default-status-blame ()
+  "Default implementation of svn-status-blame."
+  (svn-run t t 'blame "blame" "--" (svn-status-line-info->filename (svn-status-get-line-information))))
+
+(defun svn-default-status-show-svn-diff-internal (line-infos recursive revision)
+  "Default implementation of svn-status-show-svn-diff-internal."
+  ;; see comments in svn-status-show-svn-diff-internal, too
+  (when (eq revision :ask)
+    (setq revision (svn-status-read-revision-string
+                    "Diff with files for version: " "PREV")))
+
+  (let ((clear-buf t)
+        (beginning nil))
+    (dolist (line-info line-infos)
+      (svn-run nil clear-buf 'diff "diff" svn-status-default-diff-arguments
+                   "-r" (if (eq revision :auto)
+                            (if (svn-status-line-info->update-available line-info)
+                                "HEAD" "BASE")
+                          revision)
+                   (unless recursive "--non-recursive")
+                   "--"
+                   (svn-status-line-info->filename line-info))
+      (setq clear-buf nil)
+
+      ;; "svn diff --non-recursive" skips only subdirectories, not files.
+      ;; But a non-recursive diff via psvn should skip files too, because
+      ;; the user would have marked them if he wanted them to be compared.
+      ;; So we'll look for the "Index: foo" line that marks the first file
+      ;; in the diff output, and delete it and everything that follows.
+      ;; This is made more complicated by the fact that `svn-status-activate-diff-mode'
+      ;; expects the output to be left in the *svn-process* buffer.
+      (unless recursive
+        ;; Check `directory-p' relative to the `default-directory' of the
+        ;; "*svn-status*" buffer, not that of the "*svn-process*" buffer.
+        (let ((directory-p (svn-status-line-info->directory-p line-info)))
+          (with-current-buffer "*svn-process*"
+            (when directory-p
+              (goto-char (or beginning (point-min)))
+              (when (re-search-forward "^Index: " nil t)
+                (delete-region (match-beginning 0) (point-max))))
+            (goto-char (setq beginning (point-max))))))))
+  (svn-status-activate-diff-mode))
+
+(defun svn-default-status-mv ()
+  "Default implementation for svn-status-mv."
   (let* ((marked-files (svn-status-marked-files))
          (num-of-files (length marked-files))
          dest)
@@ -2820,112 +2944,6 @@ itself) before running mv."
               (svn-run nil t 'mv "mv" "--" original-name dest)
             (message "Not moving %s" original-name))))))
         (svn-status-update)))
-
-(defun svn-status-revert ()
-  "Revert non-committed changes on all selected files.
-See `svn-status-marked-files' for what counts as selected."
-  (interactive)
-  (svn-call status-revert nil))
-
-(defun svn-status-rm (force)
-  "Remove selected files from version control.
-See `svn-status-marked-files' for what counts as selected.
-When called with a prefix argument, use the --force option if the backend
-supports it."
-  (interactive "P")
-  (svn-call status-rm nil force))
-
-(defun svn-status-update-cmd ()
-  "Bring changes from the repository into the working copy."
-  (interactive)
-  (svn-call status-update-cmd nil))
-  (message "Running `svn update' for %s" default-directory)
-
-(defun svn-status-commit ()
-  "Commit selected files.
-If some files have been marked, commit those non-recursively;
-this is because marking a directory with \\[svn-status-set-user-mark]
-normally marks all of its files as well.
-If no files have been marked, commit recursively the file at point."
-  (interactive)
-  (let* ((selected-files (svn-status-marked-files))
-         (marked-files-p (svn-status-some-files-marked-p)))
-    (setq svn-status-files-to-commit selected-files
-          svn-status-recursive-commit (not marked-files-p))
-    (svn-log-edit-show-files-to-commit)
-    (svn-status-pop-to-commit-buffer)
-    (when svn-log-edit-insert-files-to-commit
-      (svn-log-edit-insert-files-to-commit))))
-
-(defun svn-status-pop-to-commit-buffer ()
-  (interactive)
-  (setq svn-status-pre-commit-window-configuration (current-window-configuration))
-  (let* ((use-existing-buffer (get-buffer "*svn-log-edit*"))
-         (commit-buffer (get-buffer-create "*svn-log-edit*"))
-         (dir default-directory))
-    (pop-to-buffer commit-buffer)
-    (setq default-directory dir)
-    (unless use-existing-buffer
-      (when (and svn-log-edit-file-name (file-readable-p svn-log-edit-file-name))
-        (insert-file-contents svn-log-edit-file-name)))
-    (svn-log-edit-mode)))
-
-(defun svn-status-export ()
-  "Run `svn export' for the current working copy.
-Ask the user for the destination path.
-`svn-status-default-export-directory' is suggested as export directory."
-  (interactive)
-  (let* ((src default-directory)
-         (dir1-name (nth 1 (nreverse (split-string src "/"))))
-         (dest (read-file-name (format "Export %s to " src) (concat svn-status-default-export-directory dir1-name))))
-    (svn-run t t 'export "export" (expand-file-name src) (expand-file-name dest))
-    (message "svn-status-export %s %s" src dest)))
-
-(defun svn-status-cleanup (arg)
-  "Clean up selected files, by removing locks, etc.
-See `svn-status-marked-files' for what counts as selected.
-When this function is called with a prefix argument, use the actual file instead."
-  (interactive "P")
-  (svn-call status-cleanup nil))
-
-(defun svn-status-resolved ()
-  "Run `svn resolved' on all selected files.
-See `svn-status-marked-files' for what counts as selected."
-  (interactive)
-  (let* ((marked-files (svn-status-marked-files))
-         (num-of-files (length marked-files)))
-    (when (yes-or-no-p
-           (if (= 1 num-of-files)
-               (format "Resolve %s? " (svn-status-line-info->filename (car marked-files)))
-             (format "Resolve %d files? " num-of-files)))
-      (message "resolving: %S" (svn-status-marked-file-names))
-      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-      (svn-run t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
-
-(defun svn-status-svnversion ()
-  "Produce a compact \"version number\" for the directory that contains
-the file at point."
-  (interactive)
-  (svn-call status-svnversion nil))
-
-;; --- default implementation for functions that may be overriden by backends
-
-(defun svn-default-status-info ()
-  "Default implementation of svn-status-info."
-  (let ((file-names (svn-status-marked-file-names)))
-    (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
-
-(defun svn-default-status-add-file-recursively (arg)
-  "Default implementation of svn-status-add-file-recursively."
-  (let ((file-names (svn-status-get-file-list-names (not arg))))
-    (message "adding: %s"  (mapconcat 'identity file-names ", "))
-    (svn-run t t 'add "add" "--" file-names)))
-
-(defun svn-default-status-add-file (arg)
-  "Default implementation of svn-status-add-file."
-  (let ((file-names (svn-status-get-file-list-names (not arg))))
-    (message "adding: %s" (mapconcat 'identity file-names ", "))
-    (svn-run t t 'add "add" "--non-recursive" "--" file-names)))
 
 (defun svn-default-status-revert ()
   "Default implementation of svn-status-revert."

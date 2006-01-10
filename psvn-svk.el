@@ -76,7 +76,7 @@
 
 ;;;###autoload
 (defun svn-svk-status (dir &optional arg)
-  "Examine the status of SVK working copy in directory DIR."
+  "Implementation of `svn-status' for the SVK backend."
   (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
@@ -108,22 +108,7 @@
         (svn-svk-run t t 'status "status" status-option)))))
 
 (defun svn-svk-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
-  "Run svk with arguments ARGLIST.
-
-If RUN-ASYNCHRON is t then run svk asynchronously.
-
-If CLEAR-PROCESS-BUFFER is t then erase the contents of the
-*svn-process* buffer before commencing.
-
-CMDTYPE is a symbol such as 'mv, 'revert, or 'add, representing the
-command to run.
-
-ARGLIST is a list of arguments \(which must include the command name,
-for example: '(\"revert\" \"file1\"\)
-ARGLIST is flattened and any every nil value is discarded.
-
-If the variable `svn-status-edit-svn-command' is non-nil then the user
-is prompted for give extra arguments, which are appended to ARGLIST."
+  "Implementation of `svn-run' for the SVK backend."
   (setq arglist (svn-status-flatten-list arglist))
   (if (eq (process-status "svk") nil)
       (progn
@@ -182,8 +167,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
     (error "You can only run one svk process at once!")))
 
 (defun svn-svk-status-parse-ar-output ()
-  "Parse the output of svk add|remove.
-Return a list that is suitable for `svn-status-update-with-command-list'"
+  "Implementation of `svn-status-parse-ar-output' for the SVK backend."
   (save-excursion
     (set-buffer "*svn-process*")
     (let ((action)
@@ -210,6 +194,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       result)))
 
 (defun svn-svk-status-parse-info-result ()
+  "Implementation of `svn-status-parse-info-result' for the SVK backend."
   (let ((url))
     (save-excursion
       (set-buffer "*svn-process*")
@@ -220,15 +205,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
     (setq svn-status-base-info `((url ,url)))))
 
 (defun svn-svk-status-show-svn-log (arg)
-  "Run `svk log' on current working copy.
-The output is put into the *svn-log* buffer
-The optional prefix argument ARG determines which switches are passed to `svn log':
- no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
- prefix argument of -1   --- use no arguments
- prefix argument of 0:   --- use the -q switch (quiet)
- other prefix arguments: --- use the -v switch (verbose)
-
-See `svn-status-marked-files' for what counts as selected."
+  "Implementation of `svn-status-show-svn-log' for the SVK backend."
   (let ((switches (cond ((eq arg 0)  '("-q"))
                         ((eq arg -1) '())
                         (arg         '("-v"))
@@ -239,8 +216,7 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-log-view-mode))))
 
 (defun svn-svk-status-rm (force)
-  "Run `svk rm' on all selected files.
-See `svn-status-marked-files' for what counts as selected."
+  "Implementation of `svn-status-rm' for the SVK backend."
   (let* ((file-names (svn-status-marked-file-names))
          (num-of-files (length file-names)))
     (when (yes-or-no-p
@@ -305,6 +281,7 @@ subdirectory. That's for the full `svn-svk-registered' to decide."
 ;; --------------------------------------------------------------------------------
 
 (defun svn-svk-status-base-dir (&optional file)
+  "Implementation of `svn-status-base-dir' for the SVK backend."
   (setq base-dir (or (and file (file-name-directory (concat file "/")))
                      (expand-file-name default-directory))))
 
