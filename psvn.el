@@ -142,6 +142,11 @@
 ;; * backend dispatching functions: better behaviour when a backend does not
 ;;   implement a function
 ;; * backends: use specialized svn-*-run function instead of svn-run-svn, for speed
+;; * use the backend dispatching system for any function that builds/runs a
+;;   command line, even for functions currently shared by SVN and SVK
+;; * use svn-run instead of svn-run-svn
+;; * reorganize code to cleanly separate the backends interface from the
+;;   default implementation
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
@@ -214,6 +219,7 @@
 ;; * status-parse-info-result
 ;; * status-rm
 ;; Functions that can optionnally be overriden in backends:
+;; * status-cleanup
 ;; Functions that are currently in the backends, but that could probably be shared
 ;; between SVN and SVK:
 ;; * status-info
@@ -2734,7 +2740,7 @@ When this function is called with a prefix argument, use the actual file instead
                                      (svn-status-directory-containing-point t))))
   (unless (string-match "^[^:/]+://" dir) ; Is it a URI?
     (setq dir (file-relative-name dir)))
-  (svn-run-svn t t 'mkdir "mkdir" "--" dir))
+  (svn-run t t 'mkdir "mkdir" "--" dir))
 
 ;;TODO: write a svn-status-cp similar to this---maybe a common
 ;;function to do both?
@@ -2832,12 +2838,13 @@ See `svn-status-marked-files' for what counts as selected.
 When called with a prefix argument, use the --force option if the backend
 supports it."
   (interactive "P")
-  (svn-call status-rm nil))
+  (svn-call status-rm nil force))
 
 (defun svn-status-update-cmd ()
   "Bring changes from the repository into the working copy."
   (interactive)
   (svn-call status-update-cmd nil))
+  (message "Running `svn update' for %s" default-directory)
 
 (defun svn-status-commit ()
   "Commit selected files.
@@ -2880,15 +2887,21 @@ Ask the user for the destination path.
     (message "svn-status-export %s %s" src dest)))
 
 (defun svn-status-cleanup (arg)
-  "Run `svn cleanup' on all selected files.
+  "Clean up selected files, by removing locks, etc.
 See `svn-status-marked-files' for what counts as selected.
 When this function is called with a prefix argument, use the actual file instead."
   (interactive "P")
+  (svn-call status-cleanup nil))
+
+(defun svn-default-status-cleanup (arg)
+  "Clean up selected files, by removing locks, etc.
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
   (let ((file-names (svn-status-get-file-list-names (not arg))))
     (if file-names
         (progn
           (message "svn-status-cleanup %S" file-names)
-          (svn-run-svn t t 'cleanup (append (list "cleanup") file-names)))
+          (svn-run t t 'cleanup "cleanup" "--" file-names))
       (message "No valid file selected - No status cleanup possible"))))
 
 (defun svn-status-resolved ()
@@ -2991,73 +3004,7 @@ REVISION is one of:
 After the call, `svn-status-get-revision-file-info' will be an alist
 \((WORKING-FILE-NAME . RETRIEVED-REVISION-FILE-NAME) ...).  These file
 names are relative to the directory where `svn-status' was run."
-  ;; In `svn-status-show-svn-diff-internal', there is a comment
-  ;; that REVISION `nil' might mean omitting the -r option entirely.
-  ;; That doesn't seem like a good idea with svn cat.
-  ;;
-  ;; TODO: Return the alist, instead of storing it in a variable.
-
-  (when (eq revision :ask)
-    (setq revision (svn-status-read-revision-string
-                    "Get files for version: " "PREV")))
-
-  (let ((count (length line-infos)))
-    (if (= count 1)
-        (let ((line-info (car line-infos)))
-          (message "Getting revision %s of %s"
-                   (if (eq revision :auto)
-                       (if (svn-status-line-info->update-available line-info)
-                           "HEAD" "BASE")
-                     revision)
-                   (svn-status-line-info->filename line-info)))
-      ;; We could compute "Getting HEAD of 8 files and BASE of 11 files"
-      ;; but that'd be more bloat than it's worth.
-      (message "Getting revision %s of %d files"
-               (if (eq revision :auto) "HEAD or BASE" revision)
-               count)))
-
-  (setq svn-status-get-specific-revision-file-info '())
-  (dolist (line-info line-infos)
-    (let* ((revision (if (eq revision :auto)
-                         (if (svn-status-line-info->update-available line-info)
-                             "HEAD" "BASE")
-                       revision))       ;must be a string by this point
-           (file-name (svn-status-line-info->filename line-info))
-           ;; If REVISION is e.g. "HEAD", should we find out the actual
-           ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
-           ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
-           ;; and if users often want to know the revision numbers of such
-           ;; files, they can use svn:keywords.
-           (file-name-with-revision (concat file-name ".~" revision "~")))
-      ;; `add-to-list' would unnecessarily check for duplicates.
-      (push (cons file-name file-name-with-revision)
-            svn-status-get-specific-revision-file-info)
-      (save-excursion
-        (let ((content
-               (with-temp-buffer
-                 (if (string= revision "BASE")
-                     (insert-file-contents (concat (file-name-directory file-name)
-                                                   (svn-svn-wc-adm-dir-name)
-                                                   "/text-base/"
-                                                   (file-name-nondirectory file-name)
-                                                   ".svn-base"))
-                   (progn
-                     (svn-run-svn nil t 'cat "cat" "-r" revision file-name)
-                     ;;todo: error processing
-                     ;;svn: Filesystem has no item
-                     ;;svn: file not found: revision `15', path `/trunk/file.txt'
-                     (insert-buffer-substring "*svn-process*")))
-                 (buffer-string))))
-          (find-file file-name-with-revision)
-          (setq buffer-read-only nil)
-          (erase-buffer)  ;Widen, because we'll save the whole buffer.
-          (insert content)
-          (save-buffer)))))
-  (setq svn-status-get-specific-revision-file-info
-        (nreverse svn-status-get-specific-revision-file-info))
-  (message "svn-status-get-specific-revision-file-info: %S"
-           svn-status-get-specific-revision-file-info))
-
+  (svn-call status-get-specific-revision-internal nil line-infos revision))
 
 (defun svn-status-ediff-with-revision (arg)
   "Run ediff on the current file with a previous revision.

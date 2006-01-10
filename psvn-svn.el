@@ -269,10 +269,79 @@ When called with a prefix argument add the command line switch --force."
         (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-svn-status-update-cmd ()
-  "Run `svn update'."
+  "Implements svn-status-update-cmd for SVN backend."
   (message "Running svn-update for %s" default-directory)
   ;TODO: use file names also
   (svn-run-svn t t 'update "update"))
+
+(defun svn-svn-status-get-specific-revision-internal (line-infos revision)
+  "Implements svn-status-get-specific-revision-internal for SVN backend."
+  ;; In `svn-status-show-svn-diff-internal', there is a comment
+  ;; that REVISION `nil' might mean omitting the -r option entirely.
+  ;; That doesn't seem like a good idea with svn cat.
+  ;;
+  ;; TODO: Return the alist, instead of storing it in a variable.
+
+  (when (eq revision :ask)
+    (setq revision (svn-status-read-revision-string
+                    "Get files for version: " "PREV")))
+
+  (let ((count (length line-infos)))
+    (if (= count 1)
+        (let ((line-info (car line-infos)))
+          (message "Getting revision %s of %s"
+                   (if (eq revision :auto)
+                       (if (svn-status-line-info->update-available line-info)
+                           "HEAD" "BASE")
+                     revision)
+                   (svn-status-line-info->filename line-info)))
+      ;; We could compute "Getting HEAD of 8 files and BASE of 11 files"
+      ;; but that'd be more bloat than it's worth.
+      (message "Getting revision %s of %d files"
+               (if (eq revision :auto) "HEAD or BASE" revision)
+               count)))
+
+  (setq svn-status-get-specific-revision-file-info '())
+  (dolist (line-info line-infos)
+    (let* ((revision (if (eq revision :auto)
+                         (if (svn-status-line-info->update-available line-info)
+                             "HEAD" "BASE")
+                       revision))       ;must be a string by this point
+           (file-name (svn-status-line-info->filename line-info))
+           ;; If REVISION is e.g. "HEAD", should we find out the actual
+           ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
+           ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
+           ;; and if users often want to know the revision numbers of such
+           ;; files, they can use svn:keywords.
+           (file-name-with-revision (concat file-name ".~" revision "~")))
+      ;; `add-to-list' would unnecessarily check for duplicates.
+      (push (cons file-name file-name-with-revision)
+            svn-status-get-specific-revision-file-info)
+      (save-excursion
+        (let ((content
+               (with-temp-buffer
+                 (if (string= revision "BASE")
+                     (insert-file-contents (concat (file-name-directory file-name)
+                                                   (svn-svn-wc-adm-dir-name)
+                                                   "/text-base/"
+                                                   (file-name-nondirectory file-name)
+                                                   ".svn-base"))
+                   (progn
+                     (svn-run-svn nil t 'cat "cat" "-r" revision file-name)
+                     ;;todo: error processing
+                     ;;svn: Filesystem has no item
+                     ;;svn: file not found: revision `15', path `/trunk/file.txt'
+                     (insert-buffer-substring "*svn-process*")))
+                 (buffer-string))))
+          (find-file file-name-with-revision)
+          (setq buffer-read-only nil)
+          (erase-buffer)  ;Widen, because we'll save the whole buffer.
+          (insert content)
+          (save-buffer)))))
+  (setq svn-status-get-specific-revision-file-info
+        (nreverse svn-status-get-specific-revision-file-info))
+  (message "svn-status-get-specific-revision-file-info: %S"
+           svn-status-get-specific-revision-file-info))
 
 (defun svn-svn-status-svnversion ()
   "Run svnversion on the directory that contains the file at point."

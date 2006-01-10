@@ -25,6 +25,7 @@
 ;; * svn-svk-status-show-svn-log should work on selected files
 ;; * quote some arguments for the shell (filenames as args, filenames as
 ;;   svn:ignore, etc.) ? VC does not... should we?
+;; * implement status-get-specific-revision-internal
 ;; * the functions using svn-status-get-specific-revision-internal can not work,
 ;;   since it needs svn-wc-adm-dir-name (.svn) that was obviously removed:
 ;;     - svn-status-get-specific-revision
