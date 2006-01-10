@@ -202,9 +202,13 @@
 ;; Backends
 ;; --------
 
-;; Some functions (called svn-FUNC) actually use svn-call to run either:
-;; * the backend-specific (svn-BACKEND-FUNC) function, if it exists
+;; Some functions (called svn-FUNC) actually use svn-call to run:
+;; * either the backend-specific (svn-BACKEND-FUNC) function, if it exists
 ;; * or svn-default-FUNC, as fallback.
+;; Any function that builds/runs a command line should use this system, so that
+;; backend-specific functions can easily be plugged-in and replace the default
+;; implementation.
+
 ;; Functions that have to be implemented by every backend for psvn to work:
 ;; * registered
 ;; * run
