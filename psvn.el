@@ -2665,21 +2665,18 @@ Commands:
         major-mode mode-name)
     (diff-mode)))
 
-
 (defun svn-status-show-process-buffer ()
   "Show the content of the *svn-process* buffer"
   (interactive)
   (svn-status-show-process-output nil))
 
 (defun svn-status-add-file-recursively (arg)
-  "Run `svn add' on all selected files.
+  "Add the selected files to the working copy.
 When a directory is added, add files recursively.
 See `svn-status-marked-files' for what counts as selected.
 When this function is called with a prefix argument, use the actual file instead."
   (interactive "P")
-  (message "adding: %S" (svn-status-get-file-list-names (not arg)))
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-  (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
+  (svn-call status-add-file-recursively nil arg))
 
 (defun svn-status-add-file (arg)
   "Run `svn add' on all selected files.

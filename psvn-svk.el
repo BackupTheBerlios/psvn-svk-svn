@@ -246,6 +246,15 @@ See `svn-status-marked-files' for what counts as selected."
   (let ((file-names (svn-status-marked-file-names)))
     (if file-names (svn-run-svn t t 'info "info" "--" file-names))))
 
+(defun svn-svk-status-add-file-recursively (arg)
+  "Run `svk add' on all selected files.
+When a directory is added, add files recursively.
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
+    (message "adding: %s"  (mapconcat 'identity file-names ", "))
+    (svn-run-svn t t 'add "add" "--" file-names)))
+
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 
