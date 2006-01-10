@@ -78,7 +78,7 @@ If ARG then pass the -u argument to `svn status'."
         (set-buffer proc-buf)
         (setq default-directory dir
               svn-status-remote (when arg t))
-        (svn-run-svn t t 'status "status" status-option)))))
+        (svn-svn-run t t 'status "status" status-option)))))
 
 (defun svn-svn-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
   "Run svn with arguments ARGLIST.
@@ -214,31 +214,26 @@ See `svn-status-marked-files' for what counts as selected."
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
 
-;; not needed since svn-default-status-info works for SVN
-; (defun svn-svn-status-info ()
-;   "Run `svn info' on all selected files.
-; See `svn-status-marked-files' for what counts as selected."
-;   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-;   (svn-run-svn t t 'info "info" "--targets" svn-status-temp-arg-file))
+;; not needed since svn-default-status-add-file-recursively works for SVN
+; (defun svn-svn-status-add-file-recursively (arg)
+;   "Run `svn add' on all selected files.
+; When a directory is added, add files recursively.
+; See `svn-status-marked-files' for what counts as selected.
+; When this function is called with a prefix argument, use the actual file instead."
+;   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
+;   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
+;   (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
 
-(defun svn-svn-status-add-file-recursively (arg)
-  "Run `svn add' on all selected files.
-When a directory is added, add files recursively.
-See `svn-status-marked-files' for what counts as selected.
-When this function is called with a prefix argument, use the actual file instead."
-  (message "adding: %S" (svn-status-get-file-list-names (not arg)))
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-  (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
-
-(defun svn-svn-status-add-file (arg)
-  "Run `svn add' on all selected files.
-When a directory is added, don't add the files of the directory
- (svn add --non-recursive <file-list> is called).
-See `svn-status-marked-files' for what counts as selected.
-When this function is called with a prefix argument, use the actual file instead."
-  (message "adding: %S" (svn-status-get-file-list-names (not arg)))
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-  (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
+;; not needed since svn-default-status-add-file works for SVN
+; (defun svn-svn-status-add-file (arg)
+;   "Run `svn add' on all selected files.
+; When a directory is added, don't add the files of the directory
+;  (svn add --non-recursive <file-list> is called).
+; See `svn-status-marked-files' for what counts as selected.
+; When this function is called with a prefix argument, use the actual file instead."
+;   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
+;   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
+;   (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
 
 (defun svn-svn-status-revert ()
   "Run `svn revert' on all selected files.

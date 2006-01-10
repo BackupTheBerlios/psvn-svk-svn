@@ -209,7 +209,8 @@
 ;; Some functions (called svn-FUNC) actually use svn-call to run either:
 ;; * the backend-specific (svn-BACKEND-FUNC) function, if it exists
 ;; * or svn-default-FUNC, as fallback.
-;; Functions that have to be implemented by every backend:
+;; Functions that have to be implemented by every backend,
+;; since no default implementation can be written:
 ;; * registered
 ;; * status
 ;; * run
@@ -218,14 +219,15 @@
 ;; * status-parse-ar-output
 ;; * status-parse-info-result
 ;; * status-rm
-;; Functions that can optionnally be overriden in backends:
+;; Functions that can optionnally be overriden in backends,
+;; if the default implementation does not suit them:
 ;; * status-info
 ;; * status-cleanup
 ;; * status-make-directory
-;; Functions that are currently in the backends, but that could probably be shared
-;; between SVN and SVK:
 ;; * status-add-file-recursively
 ;; * status-add-file
+;; Functions that are currently in the backends, but that could probably be shared
+;; between SVN and SVK:
 ;; * status-revert
 ;; * status-update-cmd
 
@@ -2918,6 +2920,18 @@ the file at point."
   "Default implementation of svn-status-info."
   (let ((file-names (svn-status-marked-file-names)))
     (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
+
+(defun svn-default-status-add-file-recursively (arg)
+  "Default implementation of svn-status-add-file-recursively."
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
+    (message "adding: %s"  (mapconcat 'identity file-names ", "))
+    (svn-run t t 'add "add" "--" file-names)))
+
+(defun svn-default-status-add-file (arg)
+  "Default implementation of svn-status-add-file."
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
+    (message "adding: %s" (mapconcat 'identity file-names ", "))
+    (svn-run t t 'add "add" "--non-recursive" "--" file-names)))
 
 (defun svn-default-status-make-directory (dir)
   "Default implementation of svn-status-make-directory."

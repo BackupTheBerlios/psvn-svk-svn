@@ -208,8 +208,6 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
           (setq skip nil))
         (forward-line 1))
       result)))
-;;(svn-svk-status-parse-ar-output)
-;; (svn-status-update-with-command-list (svn-svk-status-parse-ar-output))
 
 (defun svn-svk-status-parse-info-result ()
   (let ((url))
@@ -239,32 +237,6 @@ See `svn-status-marked-files' for what counts as selected."
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
-
-;; not needed since svn-default-status-info works for SVK
-; (defun svn-svk-status-info ()
-;   "Run `svk info' on all selected files.
-; See `svn-status-marked-files' for what counts as selected."
-;   (let ((file-names (svn-status-marked-file-names)))
-;     (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
-
-(defun svn-svk-status-add-file-recursively (arg)
-  "Run `svk add' on all selected files.
-When a directory is added, add files recursively.
-See `svn-status-marked-files' for what counts as selected.
-When this function is called with a prefix argument, use the actual file instead."
-  (let ((file-names (svn-status-get-file-list-names (not arg))))
-    (message "adding: %s"  (mapconcat 'identity file-names ", "))
-    (svn-run-svn t t 'add "add" "--" file-names)))
-
-(defun svn-svk-status-add-file (arg)
-  "Run `svk add' on all selected files.
-When a directory is added, don't add the files of the directory
- (svk add --non-recursive <file-list> is called).
-See `svn-status-marked-files' for what counts as selected.
-When this function is called with a prefix argument, use the actual file instead."
-  (let ((file-names (svn-status-get-file-list-names (not arg))))
-    (message "adding: %s" (mapconcat 'identity file-names ", "))
-    (svn-run-svn t t 'add "add" "--non-recursive" "--" file-names)))
 
 (defun svn-svk-status-revert ()
   "Run `svk revert' on all selected files.
