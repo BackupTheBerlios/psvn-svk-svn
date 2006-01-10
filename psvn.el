@@ -192,11 +192,16 @@
 ;; buffers that are not visiting any files.  Better safe than sorry.
 
 ;; Functions that should be supported by backends (calle svn-BACKEND-FUNC):
-;; * status
 ;; * registered
+;; * status
 ;; * run
 ;; * status-base-dir
 ;; * status-parse-ar-output
+;; * status-parse-info-result
+;; * status-show-svn-log
+;; * status-info
+;; * status-add-file-recursively
+;; * status-add-file
 
 ;;; Code:
 
