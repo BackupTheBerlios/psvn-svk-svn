@@ -233,7 +233,7 @@ See `svn-status-marked-files' for what counts as selected."
                         ((eq arg -1) '())
                         (arg         '("-v"))
                         (t           svn-status-default-log-arguments))))
-    (svn-run-svn t t 'log "log" switches)
+    (svn-svk-run t t 'log "log" switches)
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
@@ -248,7 +248,7 @@ See `svn-status-marked-files' for what counts as selected."
                (format "Remove %s? " (car file-names))
              (format "Remove %d files? " num-of-files)))
       (message "removing: %s" (mapconcat 'identity file-names ", "))
-      (svn-run-svn t t 'rm "rm" "--" file-names))))
+      (svn-svk-run t t 'rm "rm" "--" file-names))))
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 

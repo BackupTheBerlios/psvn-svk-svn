@@ -108,7 +108,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                                           (mapconcat 'identity arglist " "))))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
-          (message "svn-run-svn %s: %S" cmdtype arglist))
+          (message "svn-svn-run %s: %S" cmdtype arglist))
         (let* ((proc-buf (get-buffer-create "*svn-process*"))
                (svn-exe svn-status-svn-executable)
                (svn-proc))
@@ -209,46 +209,10 @@ See `svn-status-marked-files' for what counts as selected."
                         (arg         '("-v"))
                         (t           svn-status-default-log-arguments))))
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-    (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switches)
+    (svn-svn-run t t 'log "log" "--targets" svn-status-temp-arg-file switches)
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
-
-;; not needed since svn-default-status-add-file-recursively works for SVN
-; (defun svn-svn-status-add-file-recursively (arg)
-;   "Run `svn add' on all selected files.
-; When a directory is added, add files recursively.
-; See `svn-status-marked-files' for what counts as selected.
-; When this function is called with a prefix argument, use the actual file instead."
-;   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
-;   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-;   (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
-
-;; not needed since svn-default-status-add-file works for SVN
-; (defun svn-svn-status-add-file (arg)
-;   "Run `svn add' on all selected files.
-; When a directory is added, don't add the files of the directory
-;  (svn add --non-recursive <file-list> is called).
-; See `svn-status-marked-files' for what counts as selected.
-; When this function is called with a prefix argument, use the actual file instead."
-;   (message "adding: %S" (svn-status-get-file-list-names (not arg)))
-;   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-;   (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
-
-
-;; not needed since svn-default-status-revert works for SVN
-; (defun svn-svn-status-revert ()
-;   "Run `svn revert' on all selected files.
-; See `svn-status-marked-files' for what counts as selected."
-;   (let* ((marked-files (svn-status-marked-files))
-;          (num-of-files (length marked-files)))
-;     (when (yes-or-no-p
-;            (if (= 1 num-of-files)
-;                (format "Revert %s? " (svn-status-line-info->filename (car marked-files)))
-;              (format "Revert %d files? " num-of-files)))
-;       (message "reverting: %S" (svn-status-marked-file-names))
-;       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-;       (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
 
 (defun svn-svn-status-rm (force)
   "Run `svn rm' on all selected files.
@@ -263,8 +227,8 @@ When called with a prefix argument add the command line switch --force."
       (message "removing: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (if force
-          (svn-run-svn t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
-        (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
+          (svn-svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+        (svn-svn-run t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-svn-status-get-specific-revision-internal (line-infos revision)
   "Implements svn-status-get-specific-revision-internal for SVN backend."
@@ -319,7 +283,7 @@ When called with a prefix argument add the command line switch --force."
                                                    (file-name-nondirectory file-name)
                                                    ".svn-base"))
                    (progn
-                     (svn-run-svn nil t 'cat "cat" "-r" revision file-name)
+                     (svn-svn-run nil t 'cat "cat" "-r" revision file-name)
                      ;;todo: error processing
                      ;;svn: Filesystem has no item
                      ;;svn: file not found: revision `15', path `/trunk/file.txt'
