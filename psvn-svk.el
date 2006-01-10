@@ -240,11 +240,12 @@ See `svn-status-marked-files' for what counts as selected."
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
 
-(defun svn-svk-status-info ()
-  "Run `svk info' on all selected files.
-See `svn-status-marked-files' for what counts as selected."
-  (let ((file-names (svn-status-marked-file-names)))
-    (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
+;; not needed since svn-default-status-info works for SVK
+; (defun svn-svk-status-info ()
+;   "Run `svk info' on all selected files.
+; See `svn-status-marked-files' for what counts as selected."
+;   (let ((file-names (svn-status-marked-file-names)))
+;     (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
 
 (defun svn-svk-status-add-file-recursively (arg)
   "Run `svk add' on all selected files.

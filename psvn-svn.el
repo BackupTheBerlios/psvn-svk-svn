@@ -214,11 +214,12 @@ See `svn-status-marked-files' for what counts as selected."
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
 
-(defun svn-svn-status-info ()
-  "Run `svn info' on all selected files.
-See `svn-status-marked-files' for what counts as selected."
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-  (svn-run-svn t t 'info "info" "--targets" svn-status-temp-arg-file))
+;; not needed since svn-default-status-info works for SVN
+; (defun svn-svn-status-info ()
+;   "Run `svn info' on all selected files.
+; See `svn-status-marked-files' for what counts as selected."
+;   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+;   (svn-run-svn t t 'info "info" "--targets" svn-status-temp-arg-file))
 
 (defun svn-svn-status-add-file-recursively (arg)
   "Run `svn add' on all selected files.

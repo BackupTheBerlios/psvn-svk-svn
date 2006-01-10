@@ -219,10 +219,11 @@
 ;; * status-parse-info-result
 ;; * status-rm
 ;; Functions that can optionnally be overriden in backends:
+;; * status-info
 ;; * status-cleanup
+;; * status-make-directory
 ;; Functions that are currently in the backends, but that could probably be shared
 ;; between SVN and SVK:
-;; * status-info
 ;; * status-add-file-recursively
 ;; * status-add-file
 ;; * status-revert
@@ -2733,14 +2734,12 @@ When this function is called with a prefix argument, use the actual file instead
   (svn-call status-add-file nil arg))
 
 (defun svn-status-make-directory (dir)
-  "Run `svn mkdir DIR'."
+  "Create a new directory under version control."
   ;; TODO: Allow entering a URI interactively.
   ;; Currently, `read-file-name' corrupts it.
   (interactive (list (read-file-name "Make directory: "
                                      (svn-status-directory-containing-point t))))
-  (unless (string-match "^[^:/]+://" dir) ; Is it a URI?
-    (setq dir (file-relative-name dir)))
-  (svn-run t t 'mkdir "mkdir" "--" dir))
+  (svn-call status-make-directory nil dir))
 
 ;;TODO: write a svn-status-cp similar to this---maybe a common
 ;;function to do both?
@@ -2893,17 +2892,6 @@ When this function is called with a prefix argument, use the actual file instead
   (interactive "P")
   (svn-call status-cleanup nil))
 
-(defun svn-default-status-cleanup (arg)
-  "Clean up selected files, by removing locks, etc.
-See `svn-status-marked-files' for what counts as selected.
-When this function is called with a prefix argument, use the actual file instead."
-  (let ((file-names (svn-status-get-file-list-names (not arg))))
-    (if file-names
-        (progn
-          (message "svn-status-cleanup %S" file-names)
-          (svn-run t t 'cleanup "cleanup" "--" file-names))
-      (message "No valid file selected - No status cleanup possible"))))
-
 (defun svn-status-resolved ()
   "Run `svn resolved' on all selected files.
 See `svn-status-marked-files' for what counts as selected."
@@ -2918,13 +2906,33 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (svn-run-svn t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
 
-
 (defun svn-status-svnversion ()
   "Produce a compact \"version number\" for the directory that contains
 the file at point."
   (interactive)
   (svn-call status-svnversion nil))
 
+;; --- default implementation for functions that may be overriden by backends
+
+(defun svn-default-status-info ()
+  "Default implementation of svn-status-info."
+  (let ((file-names (svn-status-marked-file-names)))
+    (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
+
+(defun svn-default-status-make-directory (dir)
+  "Default implementation of svn-status-make-directory."
+  (unless (string-match "^[^:/]+://" dir) ; Is it a URI?
+    (setq dir (file-relative-name dir)))
+  (svn-run t t 'mkdir "mkdir" "--" dir))
+
+(defun svn-default-status-cleanup (arg)
+  "Default implementation of svn-status-cleanup."
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
+    (if file-names
+        (progn
+          (message "svn-status-cleanup %S" file-names)
+          (svn-run t t 'cleanup "cleanup" "--" file-names))
+      (message "No valid file selected - No status cleanup possible"))))
 
 ;; --------------------------------------------------------------------------------
 ;; Update the `svn-status-buffer-name' buffer, when a file is saved
