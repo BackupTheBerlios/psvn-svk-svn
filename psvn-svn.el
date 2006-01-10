@@ -1,31 +1,7 @@
 ;;; psvn-svn.el --- Subversion support for psvn.el / Emacs
 ;; Copyright (C) 2002-2006 by Stefan Reichoer
-
-;; Authors:
-;;   - Stefan Reichoer, <stefan@xsteve.at>
-;;   - Ben Voui, <intrigeri@boum.org>
-
-;; Contains some code from VC, under GPL:
-;;   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002,
-;;   2003, 2004, 2005, 2006 Free Software Foundation, Inc.
-
 ;; $Id$
 ;; $URL$
-
-;; psvn-svn.el is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 2, or (at your option)
-;; any later version.
-
-;; psvn-svn.el is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
-
-;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
 
 (defun svn-svn-registered (file)
   "Return true if FILE is registered under Subversion."

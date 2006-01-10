@@ -5,12 +5,12 @@
 ;;   - Stefan Reichoer, <stefan@xsteve.at>
 ;;   - Ben Voui, <intrigeri@boum.org>
 
+;; $Id$
+;; $URL$
+
 ;; Contains some code from VC, under GPL:
 ;;   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002,
 ;;   2003, 2004, 2005, 2006 Free Software Foundation, Inc.
-
-;; $Id$
-;; $URL$
 
 ;; psvn.el is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
