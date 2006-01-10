@@ -141,6 +141,7 @@
 ;;       . add svn-log-edit-erase-edit-buffer to svn-process-sentinel?
 ;; * backend dispatching functions: better behaviour when a backend does not
 ;;   implement a function
+;; * backends: use specialized svn-*-run function instead of svn-run-svn, for speed
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
@@ -197,19 +198,28 @@
 ;; impossible to abuse, as the commands that read them are used only in
 ;; buffers that are not visiting any files.  Better safe than sorry.
 
-;; Functions that should be supported by backends (called svn-BACKEND-FUNC):
+;; Backends
+;; --------
+
+;; Some functions (called svn-FUNC) actually use svn-call to run either:
+;; * the backend-specific (svn-BACKEND-FUNC) function, if it exists
+;; * or svn-default-FUNC, as fallback.
+;; Functions that have to be implemented by every backend:
 ;; * registered
 ;; * status
 ;; * run
+;; * status-show-svn-log
 ;; * status-base-dir
 ;; * status-parse-ar-output
 ;; * status-parse-info-result
-;; * status-show-svn-log
+;; * status-rm
+;; Functions that can optionnally be overriden in backends:
+;; Functions that are currently in the backends, but that could probably be shared
+;; between SVN and SVK:
 ;; * status-info
 ;; * status-add-file-recursively
 ;; * status-add-file
 ;; * status-revert
-;; * status-rm
 ;; * status-update-cmd
 
 ;;; Code:

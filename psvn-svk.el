@@ -243,7 +243,7 @@ See `svn-status-marked-files' for what counts as selected."
   "Run `svk info' on all selected files.
 See `svn-status-marked-files' for what counts as selected."
   (let ((file-names (svn-status-marked-file-names)))
-    (if file-names (svn-run-svn t t 'info "info" "--" file-names))))
+    (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
 
 (defun svn-svk-status-add-file-recursively (arg)
   "Run `svk add' on all selected files.
@@ -277,7 +277,7 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-run-svn t t 'revert "revert" "--" (mapcar 'shell-quote-argument file-names)))))
 
 (defun svn-svk-status-rm (force)
-  "Run `svn rm' on all selected files.
+  "Run `svk rm' on all selected files.
 See `svn-status-marked-files' for what counts as selected."
   (let* ((file-names (svn-status-marked-file-names))
          (num-of-files (length file-names)))
