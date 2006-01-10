@@ -155,8 +155,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (sit-for 0.1)
             (if run-asynchron
                 (progn
-                  (message "running asynchron: %s %S" svn-exe arglist)
-                  (sit-for 7)
+                  ;;(message "running asynchron: %s %S" svn-exe arglist)
                   (let ((process-environment (svn-process-environment))
                         (process-connection-type nil))
                     ;; Communicate with the subprocess via pipes rather
