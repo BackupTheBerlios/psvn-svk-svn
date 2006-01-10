@@ -2326,7 +2326,7 @@ Then move to that line."
                   (delete-char 1)))
               (message "%s %s" (if set-mark "Marked" "Unmarked") i-fname)))))
       (setq st-info (cdr st-info)))
-    ;;(svn-status-update-buffer)
+    (svn-status-update-buffer)
     (svn-status-goto-file-name newcursorpos-fname)
     (when (> mark-count 1)
       (message "%s %d files" (if set-mark "Marked" "Unmarked") mark-count))))
