@@ -878,24 +878,25 @@ and else calls
 
 It is usually called via the `svn-call' macro."
   (let ((f (assoc function-name (get backend 'svn-functions))))
-    (message "Applying %s (%s) for %s on args %S" function-name f backend args )
+    (svn-status-message 8 "svn-call-backend: applying %s (%s) for %s on args %S"
+                        function-name f backend args)
     (if f (setq f (cdr f))
       (setq f (svn-find-backend-function backend function-name))
       (push (cons function-name f) (get backend 'svn-functions)))
     (cond
      ((null f)
       (error "Sorry, %s is not implemented for %s" function-name backend))
-     ((consp f)	(apply (car f) (cdr f) args))
-     (t		(apply f args)))))
+     ((consp f)
+      (apply (car f) args))
+     (t
+      (apply f args)))))
 
 (defmacro svn-call (fun file &rest args)
-  ;; BEWARE!! `file' is evaluated three times
-  `(if ,file
-       (progn
-         (svn-status-message 7 "svn-call: running function %s on file %s" ',fun ,file)
-         (svn-call-backend (svn-backend ,file) ',fun ,@args))
-     (progn
-       (svn-status-message 7 "svn-call: using %s as default-directory to run function %s on file %s" ',default-directory ',fun ,file)
+  ;; BEWARE!! `file' is evaluated twice
+  `(progn
+     (svn-status-message 8 "svn-call: running function %s on file %s" ',fun ,file)
+     (if ,file
+         (svn-call-backend (svn-backend ,file) ',fun ,@args)
        (svn-call-backend (svn-backend ',default-directory) ',fun ,@args))))
 
 ;; Access functions to file properties
@@ -2643,7 +2644,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   ;; - `:auto': use "HEAD" if an update is known to exist, "BASE" otherwise.
   ;; In the future, `nil' might mean omit the -r option entirely;
   ;; but that currently seems to imply "BASE", so we just use that.
-  (svn-call svn-status-show-svn-diff-internal nil line-infos recursive revision))
+  (svn-call status-show-svn-diff-internal nil line-infos recursive revision))
 
 (defun svn-status-diff-save-current-defun-as-kill ()
   "Copy the function name for the change at point to the kill-ring.
@@ -3531,13 +3532,11 @@ Commands:
       (setq svn-status-operated-on-dot
             (and (= 1 (length svn-status-files-to-commit))
                  (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
-      (svn-status-create-arg-file svn-status-temp-arg-file ""
-                                  svn-status-files-to-commit "")
       (svn-run t t 'commit "commit"
                    (unless svn-status-recursive-commit "--non-recursive")
-                   "--targets" svn-status-temp-arg-file
                    "-F" svn-status-temp-file-to-remove
-                   svn-status-default-commit-arguments))
+                   svn-status-default-commit-arguments
+                   (mapcar 'svn-status-line-info->filename svn-status-files-to-commit)))
     (set-window-configuration svn-status-pre-commit-window-configuration)
     (message "svn-log editing done")))
 
