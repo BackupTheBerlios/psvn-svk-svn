@@ -76,8 +76,8 @@ If ARG then pass the -u argument to `svn status'."
         (set-buffer status-buf)
         (setq default-directory dir)
         (set-buffer proc-buf)
-        (setq default-directory dir)
-        (setq svn-status-remote (when arg t))
+        (setq default-directory dir
+              svn-status-remote (when arg t))
         (svn-run-svn t t 'status "status" status-option)))))
 
 (defun svn-svn-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
