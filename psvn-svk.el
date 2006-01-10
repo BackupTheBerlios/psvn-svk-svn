@@ -20,6 +20,24 @@
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
+;; TODO ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; * svn-svk-status-show-svn-log should work on selected files
+;; * quote some arguments for the shell (filenames as args, filenames as
+;;   svn:ignore, etc.) ? VC does not... should we?
+;; * the functions using svn-status-get-specific-revision-internal can not work,
+;;   since it needs svn-wc-adm-dir-name (.svn) that was obviously removed:
+;;     - svn-status-get-specific-revision
+;;     - svn-status-ediff-with-revision
+;; * some functions can not work since they use --targets, which does not
+;;   exist in SVK 1.06; quite easy to fix, though
+;; * 'svk export' does not exist.
+;; * svn-svk-status-base-dir: find the base checkout dir instead of cheating
+;; * add SVK functions that SVN does not support
+;; * use great ideas from vc-svk-co-* functions
+;; * submit SVK bug report for it's management of filenames starting with '++'.
+
+
 ;;; init
 
 ; better keep 'SVN first
@@ -202,6 +220,25 @@ psvn.el(defun svn-svk-status-parse-info-result ()
         (search-forward "Depot Path: "))
       (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
     (setq svn-status-base-info `((url ,url)))))
+
+(defun svn-svk-status-show-svn-log (arg)
+  "Run `svk log' on current working copy.
+The output is put into the *svn-log* buffer
+The optional prefix argument ARG determines which switches are passed to `svn log':
+ no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
+ prefix argument of -1   --- use no arguments
+ prefix argument of 0:   --- use the -q switch (quiet)
+ other prefix arguments: --- use the -v switch (verbose)
+
+See `svn-status-marked-files' for what counts as selected."
+  (let ((switches (cond ((eq arg 0)  '("-q"))
+                        ((eq arg -1) '())
+                        (arg         '("-v"))
+                        (t           svn-status-default-log-arguments))))
+    (svn-run-svn t t 'log "log" switches)
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (svn-log-view-mode))))
 
 
 ;;; Aux. functions that will often avoid slow calls to svk.

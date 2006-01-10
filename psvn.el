@@ -849,7 +849,6 @@ and else calls
 It is usually called via the `svn-call' macro."
   (let ((f (assoc function-name (get backend 'svn-functions))))
     (message "Applying %s (%s) for %s on args %S" function-name f backend args )
-    (sit-for 4)
     (if f (setq f (cdr f))
       (setq f (svn-find-backend-function backend function-name))
       (push (cons function-name f) (get backend 'svn-functions)))
@@ -2542,11 +2541,10 @@ Consider svn-status-window-alist to choose the buffer name."
             (other-window 1))
         (svn-status-show-process-buffer-internal scroll-to-top)))))
 
-
 (defun svn-status-show-svn-log (arg)
-  "Run `svn log' on selected files.
+  "Show the log for selected files.
 The output is put into the *svn-log* buffer
-The optional prefix argument ARG determines which switches are passed to `svn log':
+The optional prefix argument ARG determines which switches are passed to `log':
  no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
  prefix argument of -1   --- use no arguments
  prefix argument of 0:   --- use the -q switch (quiet)
@@ -2554,15 +2552,7 @@ The optional prefix argument ARG determines which switches are passed to `svn lo
 
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
-  (let ((switches (cond ((eq arg 0)  '("-q"))
-                        ((eq arg -1) '())
-                        (arg         '("-v"))
-                        (t           svn-status-default-log-arguments))))
-    (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-    (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switches)
-    (save-excursion
-      (set-buffer "*svn-process*")
-      (svn-log-view-mode))))
+  (svn-call status-show-svn-log nil arg))
 
 (defun svn-status-info ()
   "Run `svn info' on all selected files.

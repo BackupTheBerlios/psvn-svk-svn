@@ -194,6 +194,26 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
     (setq svn-status-base-info `((url ,url)))))
 
+(defun svn-svn-status-show-svn-log (arg)
+  "Run `svn log' on selected files.
+The output is put into the *svn-log* buffer
+The optional prefix argument ARG determines which switches are passed to `svn log':
+ no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
+ prefix argument of -1   --- use no arguments
+ prefix argument of 0:   --- use the -q switch (quiet)
+ other prefix arguments: --- use the -v switch (verbose)
+
+See `svn-status-marked-files' for what counts as selected."
+  (let ((switches (cond ((eq arg 0)  '("-q"))
+                        ((eq arg -1) '())
+                        (arg         '("-v"))
+                        (t           svn-status-default-log-arguments))))
+    (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+    (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switches)
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (svn-log-view-mode))))
+
 (defun svn-svn-status-svnversion ()
   "Run svnversion on the directory that contains the file at point."
   (svn-status-ensure-cursor-on-file)
