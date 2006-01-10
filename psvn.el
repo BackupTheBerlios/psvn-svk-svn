@@ -193,7 +193,6 @@
 
 (require 'easymenu)
 (require 'diff-mode nil t)
-(require 'vc)
 
 ;;; user setable variables
 (defcustom svn-handled-backends '(SVN SVK)
@@ -726,6 +725,9 @@ Use this instead of `alist', for XEmacs 21.4 compatibility."
                                          ,value-type)))))
     widget))
 
+
+;;; keymaps
+
 (defvar svn-global-keymap nil "Global keymap for psvn.el.
 To bind this to a different key, customize `svn-status-prefix-key'.")
 (put 'svn-global-keymap 'risky-local-variable t)
@@ -765,6 +767,135 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 ;; `defalias' of GNU Emacs 21.4 doesn't allow a docstring argument.
 (put 'svn-global-keymap 'function-documentation
      '(documentation-property 'svn-global-keymap 'variable-documentation t))
+
+
+;; We need a notion of per-file properties because the version
+;; control state of a file is expensive to derive --- we compute
+;; them when the file is initially found, keep them up to date
+;; during any subsequent psvn operations, and forget them when
+;; the buffer is killed.
+
+(defvar svn-file-prop-obarray (make-vector 17 0)
+  "Obarray for per-file properties.")
+
+(defvar svn-touched-properties nil)
+
+(defun svn-file-setprop (file property value)
+  "Set per-file VC PROPERTY for FILE to VALUE."
+  (if (and svn-touched-properties
+	   (not (memq property svn-touched-properties)))
+      (setq svn-touched-properties (append (list property)
+					  svn-touched-properties)))
+  (put (intern file svn-file-prop-obarray) property value))
+
+(defun svn-file-getprop (file property)
+  "Get per-file VC PROPERTY for FILE."
+  (get (intern file svn-file-prop-obarray) property))
+
+(defun svn-file-clearprops (file)
+  "Clear all VC properties of FILE."
+  (setplist (intern file svn-file-prop-obarray) nil))
+
+;;; backend dispatch functions
+;; We keep properties on each symbol naming a backend as follows:
+;;  * `svn-functions': an alist mapping svn-FUNCTION to svn-BACKEND-FUNCTION.
+
+(defun svn-make-backend-sym (backend sym)
+  "Return BACKEND-specific version of psvn symbol SYM."
+  (intern (concat "svn-" (downcase backend)
+                  "-" (symbol-name sym))))
+
+(defun svn-find-backend-function (backend fun)
+  "Return BACKEND-specific implementation of FUN.
+If there is no such implementation, return the default implementation;
+if that doesn't exist either, return nil."
+  (let ((f (svn-make-backend-sym backend fun)))
+    (if (fboundp f) f
+      ;; Load psvn-BACKEND.el if needed.
+      (require (intern (concat "psvn-" (downcase backend)))))
+      (if (fboundp f) f
+	(let ((def (svn-make-backend-sym "default" fun)))
+	  (if (fboundp def) (cons def backend) nil)))))
+
+(defun svn-call-backend (backend function-name &rest args)
+  "Call for BACKEND the implementation of FUNCTION-NAME with the given ARGS.
+Calls
+
+    (apply 'svn-BACKEND-FUN ARGS)
+
+if svn-BACKEND-FUN exists (after trying to find it in svn-BACKEND.el)
+and else calls
+
+    (apply 'svn-default-FUN BACKEND ARGS)
+
+It is usually called via the `svn-call' macro."
+  (let ((f (assoc function-name (get backend 'svn-functions))))
+    (if f (setq f (cdr f))
+      (setq f (svn-find-backend-function backend function-name))
+      (push (cons function-name f) (get backend 'svn-functions)))
+    (cond
+     ((null f)
+      (error "Sorry, %s is not implemented for %s" function-name backend))
+     ((consp f)	(apply (car f) (cdr f) args))
+     (t		(apply f args)))))
+
+(defmacro svn-call (fun file &rest args)
+  ;; BEWARE!! `file' is evaluated twice!!
+  `(svn-call-backend (svn-backend ,file) ',fun ,file ,@args))
+
+;; Access functions to file properties
+
+;; properties indicating the backend being used for FILE
+
+(defun svn-registered (file)
+  "Return non-nil if FILE is registered in a version control system
+supported by psvn.
+
+This function performs the check each time it is called.  To rely
+on the result of a previous call, use `svn-backend' instead.  If the
+file was previously registered under a certain backend, then that
+backend is tried first."
+  (let (handler)
+    (cond
+     ((and
+       (file-name-directory file)
+       (string-match svn-ignore-dir-regexp (file-name-directory file)))
+      nil)
+     ((and (boundp 'file-name-handler-alist)
+          (setq handler (find-file-name-handler file 'svn-registered)))
+      ;; handler should set svn-backend and return t if registered
+      (funcall handler 'svn-registered file))
+     (t
+      ;; There is no file name handler.
+      ;; Try svn-BACKEND-registered for each handled BACKEND.
+      (catch 'found
+	(let ((backend (svn-file-getprop file 'svn-backend)))
+	  (mapcar
+	   (lambda (b)
+	     (and (svn-call-backend b 'registered file)
+		  (svn-file-setprop file 'svn-backend b)
+		  (throw 'found t)))
+	   (if (or (not backend) (eq backend 'none))
+	       svn-handled-backends
+	     (cons backend svn-handled-backends))))
+        ;; File is not registered.
+        (svn-file-setprop file 'svn-backend 'none)
+        nil)))))
+
+(defun svn-backend (file)
+  "Return the version control type of FILE, nil if it is not registered."
+  ;; `file' can be nil in several places (typically due to the use of
+  ;; code like (svn-backend buffer-file-name)).
+  (when (stringp file)
+    (let ((property (svn-file-getprop file 'svn-backend)))
+      ;; Note that internally, Emacs remembers unregistered
+      ;; files by setting the property to `none'.
+      (cond ((eq property 'none) nil)
+	    (property)
+	    ;; svn-registered sets the svn-backend property
+	    (t (if (svn-registered file)
+		   (svn-file-getprop file 'svn-backend)
+		 nil))))))
 
 
 ;; named after SVN_WC_ADM_DIR_NAME in svn_wc.h
