@@ -2807,18 +2807,10 @@ itself) before running mv."
         (svn-status-update)))
 
 (defun svn-status-revert ()
-  "Run `svn revert' on all selected files.
+  "Revert non-committed changes on all selected files.
 See `svn-status-marked-files' for what counts as selected."
   (interactive)
-  (let* ((marked-files (svn-status-marked-files))
-         (num-of-files (length marked-files)))
-    (when (yes-or-no-p
-           (if (= 1 num-of-files)
-               (format "Revert %s? " (svn-status-line-info->filename (car marked-files)))
-             (format "Revert %d files? " num-of-files)))
-      (message "reverting: %S" (svn-status-marked-file-names))
-      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-      (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
+  (svn-call status-revert nil))
 
 (defun svn-status-rm (force)
   "Run `svn rm' on all selected files.

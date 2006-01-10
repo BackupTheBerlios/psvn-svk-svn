@@ -239,6 +239,19 @@ When this function is called with a prefix argument, use the actual file instead
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
   (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
 
+(defun svn-svn-status-revert ()
+  "Run `svn revert' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (let* ((marked-files (svn-status-marked-files))
+         (num-of-files (length marked-files)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "Revert %s? " (svn-status-line-info->filename (car marked-files)))
+             (format "Revert %d files? " num-of-files)))
+      (message "reverting: %S" (svn-status-marked-file-names))
+      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+      (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
+
 (defun svn-svn-status-svnversion ()
   "Run svnversion on the directory that contains the file at point."
   (svn-status-ensure-cursor-on-file)

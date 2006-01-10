@@ -32,6 +32,7 @@
 ;; * some functions can not work since they use --targets, which does not
 ;;   exist in SVK 1.06; quite easy to fix, though
 ;; * 'svk export' does not exist; replace it by copy?
+;; * svnversion has no SVK equivalent; emulate it?
 ;; * svn-svk-status-base-dir: find the base checkout dir instead of cheating
 ;; * add SVK functions that SVN does not support
 ;; * use great ideas from vc-svk-co-* functions
@@ -264,6 +265,18 @@ When this function is called with a prefix argument, use the actual file instead
   (let ((file-names (svn-status-get-file-list-names (not arg))))
     (message "adding: %s" (mapconcat 'identity file-names ", "))
     (svn-run-svn t t 'add "add" "--non-recursive" "--" file-names)))
+
+(defun svn-svk-status-revert ()
+  "Run `svk revert' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (let* ((file-names (svn-status-marked-file-names))
+         (num-of-files (length file-names)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "Revert %s? " (car file-names))
+             (format "Revert %d files? " num-of-files)))
+      (message "reverting: %s" (mapconcat 'identity file-names ", "))
+      (svn-run-svn t t 'revert "revert" "--" (mapcar 'shell-quote-argument file-names)))))
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 
