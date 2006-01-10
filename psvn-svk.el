@@ -54,6 +54,41 @@
   (let ((lfile (file-truename file)))   ; SVK stores truenames
     (svn-svk-co-path-p lfile)))
 
+;;;###autoload
+(defun svn-svk-status (dir &optional arg)
+  "Examine the status of SVK working copy in directory DIR."
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
+  (unless (file-directory-p dir)
+    (error "%s is not a directory" dir))
+  (if (not
+       (string-match
+	"^Checkout Path:"
+	(shell-command-to-string (concat "svk info " (expand-file-name dir)))))
+      (when (y-or-n-p
+             (concat dir " does not seem to be a SVK working copy. "
+                     "Run dired instead? "))
+        (dired dir))
+    (setq dir (file-name-as-directory dir))
+    (when svn-status-load-state-before-svn-status
+      (unless (string= dir (car svn-status-directory-history))
+        (svn-status-load-state t)))
+    (setq svn-status-directory-history (delete dir svn-status-directory-history))
+    (add-to-list 'svn-status-directory-history dir)
+    (if (string= (buffer-name) svn-status-buffer-name)
+        (setq svn-status-display-new-status-buffer nil)
+      (setq svn-status-display-new-status-buffer t)
+      (setq svn-status-initial-window-configuration (current-window-configuration)))
+    (let* ((status-buf (get-buffer-create svn-status-buffer-name))
+           (proc-buf (get-buffer-create "*svn-process*"))
+           (status-option (if svn-status-verbose "-v" "")))
+      (save-excursion
+        (set-buffer status-buf)
+        (setq default-directory dir)
+        (set-buffer proc-buf)
+        (setq default-directory dir
+              svk-status-remote (when arg t))
+        (svn-svk-run t t 'status "status" status-option)))))
+
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 
