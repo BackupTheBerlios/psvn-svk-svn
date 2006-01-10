@@ -12,6 +12,7 @@
 ;; * 'svnversion' has no SVK equivalent; emulate it?
 ;; * svn-svk-status-base-dir: find the base checkout dir instead of cheating
 ;; * svn-svk-status-show-svn-log should work on selected files
+;; * defcustom a few variables
 ;; * use great ideas from vc-svk-co-* functions
 ;; * add SVK functions that SVN does not support
 ;; * submit SVK bug report for it's management of filenames starting with '++'.
@@ -21,6 +22,16 @@
 
 ; better keep 'SVN first
 (add-to-list 'svn-handled-backends 'SVK t)
+
+;;; custom
+
+(defcustom svn-status-svk-executable "svk"
+  "*The name of the svk executable.
+This can be either absolute or looked up on `exec-path'."
+  ;; Don't use (file :must-match t).  It doesn't know about `exec-path'.
+  :type 'file
+  :group 'psvn)
+(put 'svn-status-svk-executable 'risky-local-variable t)
 
 ;;; Compatibility with Emacs <22
 

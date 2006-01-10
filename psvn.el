@@ -138,7 +138,6 @@
 ;;       . in svn-process-sentinel, svn-status-update* and
 ;;         svn-status-parse-commit-output stuff
 ;;       . add svn-log-edit-erase-edit-buffer to svn-process-sentinel?
-;;    - defcustom a few variables
 ;;    - get rid of --targets option, which does not exist in SVK 1.06
 ;; * backend dispatching functions: better behaviour when a backend does not
 ;;   implement a function
@@ -194,9 +193,7 @@
 ;; interactive commands meant to be used only in a specific mode should
 ;; have names beginning with the name of that mode: for example,
 ;; "svn-status-add-file" in "svn-status-mode".  "psvn" should be used
-;; only in names of files, customization groups, and features.  If SVK
-;; support is ever added, it should use "svn-svk-" when no existing
-;; prefix is applicable.
+;; only in names of files, customization groups, and features.
 
 ;; Many of the variables marked as `risky-local-variable' are probably
 ;; impossible to abuse, as the commands that read them are used only in
@@ -319,14 +316,6 @@ This can be either absolute or looked up on `exec-path'."
   :type 'file
   :group 'psvn)
 (put 'svn-status-svn-executable 'risky-local-variable t)
-
-(defcustom svn-status-svk-executable "svk"
-  "*The name of the svk executable.
-This can be either absolute or looked up on `exec-path'."
-  ;; Don't use (file :must-match t).  It doesn't know about `exec-path'.
-  :type 'file
-  :group 'psvn)
-(put 'svn-status-svk-executable 'risky-local-variable t)
 
 (defcustom svn-status-default-export-directory "~/" "*The default directory that is suggested svn export."
   :type 'file
@@ -2828,7 +2817,7 @@ the file at point."
 (defun svn-default-status-info ()
   "Default implementation of svn-status-info."
   (let ((file-names (svn-status-marked-file-names)))
-    (if file-names (svn-svk-run t t 'info "info" "--" file-names))))
+    (if file-names (svn-run t t 'info "info" "--" file-names))))
 
 (defun svn-default-status-add-file-recursively (arg)
   "Default implementation of svn-status-add-file-recursively."
