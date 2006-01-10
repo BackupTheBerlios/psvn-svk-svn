@@ -7,6 +7,10 @@
 ;; $Id$
 ;; $URL$
 
+;; Contains some code from VC, under GPL:
+;;   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
+
 ;; psvn-svn.el is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation; either version 2, or (at your option)
@@ -25,8 +29,8 @@
 (defun svn-svn-registered (file)
   "Return true if FILE is registered under Subversion."
   ;; a quick false positive test: is there a `.svn/entries' file?
-  (file-exists-p (expand-file-name ".svn/entries"
-                                        (file-name-directory file))))
+  (file-exists-p (expand-file-name (concat (svn-svn-wc-adm-dir-name) "/entries")
+                                   (file-name-directory file))))
 
 ;; named after SVN_WC_ADM_DIR_NAME in svn_wc.h
 (defun svn-svn-wc-adm-dir-name ()
