@@ -194,6 +194,7 @@
 ;; Functions that should be supported by backends (calle svn-BACKEND-FUNC):
 ;; * status
 ;; * registered
+;; * run
 
 ;;; Code:
 
@@ -847,7 +848,9 @@ It is usually called via the `svn-call' macro."
 
 (defmacro svn-call (fun file &rest args)
   ;; BEWARE!! `file' is evaluated twice!!
-  `(svn-call-backend (svn-backend ,file) ',fun ,file ,@args))
+  (or (and file
+           `(svn-call-backend (svn-backend ,file) ',fun ,@args))
+      `(svn-call-backend (svn-backend ,default-directory) ',fun ,@args)))
 
 ;; Access functions to file properties
 
@@ -924,7 +927,7 @@ If ARG then also update the working copy, if supported by the backend."
   (interactive (list (svn-read-directory-name "Status directory: "
                                               nil default-directory nil)
                      current-prefix-arg))
-  (svn-call status dir arg))
+  (svn-call status nil dir arg))
 
 (defun svn-status-this-directory (arg)
   "Run `svn-status' for the `default-directory'"
@@ -960,79 +963,10 @@ the usual `process-environment'."
           and when has-value
             collect elt))
 
-(defun svn-run-svn (run-asynchron clear-process-buffer cmdtype &rest arglist)
-  "Run svn with arguments ARGLIST.
+(defun svn-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
+  (svn-call run nil run-asynchron clear-process-buffer cmdtype arglist))
 
-If RUN-ASYNCHRON is t then run svn asynchronously.
-
-If CLEAR-PROCESS-BUFFER is t then erase the contents of the
-*svn-process* buffer before commencing.
-
-CMDTYPE is a symbol such as 'mv, 'revert, or 'add, representing the
-command to run.
-
-ARGLIST is a list of arguments \(which must include the command name,
-for example: '(\"revert\" \"file1\"\)
-ARGLIST is flattened and any every nil value is discarded.
-
-If the variable `svn-status-edit-svn-command' is non-nil then the user
-is prompted for give extra arguments, which are appended to ARGLIST."
-  (setq arglist (svn-status-flatten-list arglist))
-  (if (eq (process-status "svn") nil)
-      (progn
-        (when svn-status-edit-svn-command
-          (setq arglist (append arglist
-                                (split-string
-                                 (read-from-minibuffer
-                                  (format "Run `svn %s' with extra arguments: "
-                                          (mapconcat 'identity arglist " "))))))
-          (when (eq svn-status-edit-svn-command t)
-            (svn-status-toggle-edit-cmd-flag t))
-          (message "svn-run-svn %s: %S" cmdtype arglist))
-        (let* ((proc-buf (get-buffer-create "*svn-process*"))
-               (svn-exe svn-status-svn-executable)
-               (svn-proc))
-          (when (listp (car arglist))
-            (setq arglist (car arglist)))
-          (save-excursion
-            (set-buffer proc-buf)
-            (when svn-status-coding-system
-              (setq buffer-file-coding-system svn-status-coding-system))
-            (setq buffer-read-only nil)
-            (fundamental-mode)
-            (if clear-process-buffer
-                (delete-region (point-min) (point-max))
-              (goto-char (point-max)))
-            (setq svn-process-cmd cmdtype)
-            (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
-            (svn-status-update-mode-line)
-            (sit-for 0.1)
-            (if run-asynchron
-                (progn
-                  ;;(message "running asynchron: %s %S" svn-exe arglist)
-                  (let ((process-environment (svn-process-environment))
-                        (process-connection-type nil))
-                    ;; Communicate with the subprocess via pipes rather
-                    ;; than via a pseudoterminal, so that if the svn+ssh
-                    ;; scheme is being used, SSH will not ask for a
-                    ;; passphrase via stdio; psvn.el is currently unable
-                    ;; to answer such prompts.  Instead, SSH will run
-                    ;; x11-ssh-askpass if possible.  If Emacs is being
-                    ;; run on a TTY without $DISPLAY, this will fail; in
-                    ;; such cases, the user should start ssh-agent and
-                    ;; then run ssh-add explicitly.
-                    (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
-                  (set-process-sentinel svn-proc 'svn-process-sentinel)
-                  (when svn-status-track-user-input
-                    (set-process-filter svn-proc 'svn-process-filter)))
-              ;;(message "running synchron: %s %S" svn-exe arglist)
-              (let ((process-environment (svn-process-environment)))
-                ;; `call-process' ignores `process-connection-type' and
-                ;; never opens a pseudoterminal.
-                (apply 'call-process svn-exe nil proc-buf nil arglist))
-              (setq svn-status-mode-line-process-status "")
-              (svn-status-update-mode-line)))))
-    (error "You can only run one svn process at once!")))
+(defalias 'svn-run-svn 'svn-run)
 
 (defun svn-process-sentinel-fixup-path-seperators()
   (when (eq system-type 'windows-nt)
