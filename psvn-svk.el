@@ -212,6 +212,13 @@ subdirectory. That's for the full `svn-svk-registered' to decide."
                 svn-svk-co-paths
                 :key 'first)))
 
+;; --------------------------------------------------------------------------------
+;; status persistent options
+;; --------------------------------------------------------------------------------
+
+(defun svn-svk-status-base-dir (&optional dir)
+  (setq base-dir (or dir (expand-file-name default-directory))))
+
 (provide 'psvn-svk)
 
 ;; Local Variables:

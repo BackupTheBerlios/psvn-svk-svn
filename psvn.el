@@ -195,6 +195,7 @@
 ;; * status
 ;; * registered
 ;; * run
+;; * status-base-dir
 
 ;;; Code:
 
@@ -3723,16 +3724,7 @@ When called with a prefix argument, ask the user for the revision."
 ;; --------------------------------------------------------------------------------
 
 (defun svn-status-base-dir ()
-  (let ((base-dir (expand-file-name default-directory))
-        (dot-svn-dir)
-        (dir-below (expand-file-name default-directory)))
-    (setq dot-svn-dir (concat base-dir (svn-svn-wc-adm-dir-name)))
-    (while (when (and dir-below (file-exists-p dot-svn-dir))
-             (setq base-dir (file-name-directory dot-svn-dir))
-             (string-match "\\(.+/\\).+/" dir-below)
-             (setq dir-below (match-string 1 dir-below))
-             (setq dot-svn-dir (concat dir-below (svn-svn-wc-adm-dir-name)))))
-    base-dir))
+  (svn-call status-base-dir nil))
 
 (defun svn-status-save-state ()
   (interactive)

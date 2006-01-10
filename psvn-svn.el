@@ -48,7 +48,7 @@ If ARG then pass the -u argument to `svn status'."
   (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
-  (if (not (file-exists-p (concat dir "/" (svn-svn-wc-adm-dir-name) "/")))
+  (if (not (svn-svn-registered dir))
       (when (y-or-n-p
              (concat dir
                      " does not seem to be a Subversion working copy (no "
@@ -152,6 +152,22 @@ is prompted for give extra arguments, which are appended to ARGLIST."
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
+
+;; --------------------------------------------------------------------------------
+;; status persistent options
+;; --------------------------------------------------------------------------------
+
+(defun svn-svn-status-base-dir (&optional dir)
+  (let ((base-dir (or dir (expand-file-name default-directory)))
+        (dot-svn-dir)
+        (dir-below (expand-file-name default-directory)))
+    (setq dot-svn-dir (concat base-dir (svn-svn-wc-adm-dir-name)))
+    (while (when (and dir-below (file-exists-p dot-svn-dir))
+             (setq base-dir (file-name-directory dot-svn-dir))
+             (string-match "\\(.+/\\).+/" dir-below)
+             (setq dir-below (match-string 1 dir-below))
+             (setq dot-svn-dir (concat dir-below (svn-svn-wc-adm-dir-name)))))
+    base-dir))
 
 (provide 'psvn-svn)
 
