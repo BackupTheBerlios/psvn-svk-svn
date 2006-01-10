@@ -3403,27 +3403,29 @@ Commands:
   (svn-prop-edit-do-it t))
 
 (defun svn-prop-edit-do-it (async)
-  (message "svn propset %s on %s"
-           svn-status-propedit-property-name
-           (mapcar 'svn-status-line-info->filename svn-status-propedit-file-list))
-  (save-excursion
-    (set-buffer (get-buffer "*svn-property-edit*"))
-    (when (fboundp 'set-buffer-file-coding-system)
-      (set-buffer-file-coding-system 'undecided-unix nil))
-    (setq svn-status-temp-file-to-remove
-          (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
-    (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
-  (when svn-status-propedit-file-list ; there are files to change properties
-    (svn-status-create-arg-file svn-status-temp-arg-file ""
-                                svn-status-propedit-file-list "")
-    (setq svn-status-propedit-file-list nil)
-    (svn-run async t 'propset "propset"
-         svn-status-propedit-property-name
-                 "--targets" svn-status-temp-arg-file
-                 "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
-    (unless async (svn-status-remove-temp-file-maybe)))
-  (when svn-status-pre-propedit-window-configuration
-    (set-window-configuration svn-status-pre-propedit-window-configuration)))
+  (svn-call prop-edit-do-it nil async))
+
+(defun svn-default-prop-edit-do-it (async)
+  "Default implementation of `svn-prop-edit-do-it'."
+  (let ((file-names (mapcar 'svn-status-line-info->filename svn-status-propedit-file-list)))
+    (message "Setting property %s on %s"
+             svn-status-propedit-property-name
+             (mapconcat 'identity file-names ", "))
+    (save-excursion
+      (set-buffer (get-buffer "*svn-property-edit*"))
+      (when (fboundp 'set-buffer-file-coding-system)
+        (set-buffer-file-coding-system 'undecided-unix nil))
+      (setq svn-status-propedit-property-value (buffer-string)))
+    (when file-names            ; there are files to change properties
+      (setq svn-status-propedit-file-list nil)
+      (svn-run-svn async t 'propset "propset"
+                   svn-status-propedit-property-name
+                   svn-status-propedit-property-value
+                   "--"
+                   file-names)
+      (unless async (setq svn-status-propedit-property-value nil)))
+    (when svn-status-pre-propedit-window-configuration
+      (set-window-configuration svn-status-pre-propedit-window-configuration))))
 
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")
@@ -3696,6 +3698,7 @@ When called with a prefix argument, ask the user for the revision."
   (svn-call status-base-dir file))
 
 (defun svn-status-save-state ()
+  "Save psvn persistent options for this working copy to a file."
   (interactive)
   (let ((buf (find-file (concat (svn-status-base-dir) "++psvn.state"))))
     (erase-buffer)        ;Widen, because we'll save the whole buffer.
@@ -3710,6 +3713,7 @@ When called with a prefix argument, ask the user for the revision."
     (kill-buffer buf)))
 
 (defun svn-status-load-state (&optional no-error)
+  "Load psvn persistent options for this working copy from a file."
   (interactive)
   (let ((file (concat (svn-status-base-dir) "++psvn.state")))
     (if (file-readable-p file)
