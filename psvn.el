@@ -861,10 +861,13 @@ It is usually called via the `svn-call' macro."
 
 (defmacro svn-call (fun file &rest args)
   ;; BEWARE!! `file' is evaluated three times
-  `(or (and ,file
-            (svn-call-backend (svn-backend ,file) ',fun ,@args))
-       (and (svn-status-message 7 "svn-call: using %s as default-directory to run function %s on file %s" ,default-directory ',fun ,file)
-            (svn-call-backend (svn-backend ,default-directory) ',fun ,@args))))
+  `(if ,file
+       (progn
+         (svn-status-message 7 "svn-call: running function %s on file %s" ',fun ,file)
+         (svn-call-backend (svn-backend ,file) ',fun ,@args))
+     (progn
+       (svn-status-message 7 "svn-call: using %s as default-directory to run function %s on file %s" ',default-directory ',fun ,file)
+       (svn-call-backend (svn-backend ',default-directory) ',fun ,@args))))
 
 ;; Access functions to file properties
 
@@ -2906,18 +2909,11 @@ See `svn-status-marked-files' for what counts as selected."
 
 
 (defun svn-status-svnversion ()
-  "Run svnversion on the directory that contains the file at point."
+  "Produce a compact \"version number\" for the directory that contains
+the file at point."
   (interactive)
-  (svn-status-ensure-cursor-on-file)
-  (let ((simple-path (svn-status-line-info->filename (svn-status-get-line-information)))
-        (full-path (svn-status-line-info->full-path (svn-status-get-line-information)))
-        (version))
-    (unless (file-directory-p simple-path)
-      (setq simple-path (or (file-name-directory simple-path) "."))
-      (setq full-path (file-name-directory full-path)))
-    (setq version (shell-command-to-string (concat "svnversion -n " full-path)))
-    (message "svnversion for '%s': %s" simple-path version)
-    version))
+  (svn-call status-svnversion nil))
+
 
 ;; --------------------------------------------------------------------------------
 ;; Update the `svn-status-buffer-name' buffer, when a file is saved

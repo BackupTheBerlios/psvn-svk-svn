@@ -81,6 +81,7 @@
            (status-option (if svn-status-verbose "-v" "")))
       (save-excursion
         (set-buffer status-buf)
+        (setq default-directory dir)
         (set-buffer proc-buf)
         (setq default-directory dir
               svn-status-remote (when arg t))

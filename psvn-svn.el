@@ -76,6 +76,7 @@ If ARG then pass the -u argument to `svn status'."
         (set-buffer status-buf)
         (setq default-directory dir)
         (set-buffer proc-buf)
+        (setq default-directory dir)
         (setq svn-status-remote (when arg t))
         (svn-run-svn t t 'status "status" status-option)))))
 
@@ -182,6 +183,19 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       result)))
 ;;(svn-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
+
+(defun svn-svn-status-svnversion ()
+  "Run svnversion on the directory that contains the file at point."
+  (svn-status-ensure-cursor-on-file)
+  (let ((simple-path (svn-status-line-info->filename (svn-status-get-line-information)))
+        (full-path (svn-status-line-info->full-path (svn-status-get-line-information)))
+        (version))
+    (unless (file-directory-p simple-path)
+      (setq simple-path (or (file-name-directory simple-path) "."))
+      (setq full-path (file-name-directory full-path)))
+    (setq version (shell-command-to-string (concat "svnversion -n " full-path)))
+    (message "svnversion for '%s': %s" simple-path version)
+    version))
 
 ;; --------------------------------------------------------------------------------
 ;; status persistent options
