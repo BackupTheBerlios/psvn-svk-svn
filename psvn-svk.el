@@ -177,8 +177,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
-              (svn-status-update-mode-line)
-              ))))
+              (svn-status-update-mode-line)))))
     (error "You can only run one svk process at once!")))
 
 (defun svn-svk-status-parse-ar-output ()
