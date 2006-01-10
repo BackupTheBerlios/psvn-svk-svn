@@ -935,7 +935,13 @@ If ARG then also update the working copy, if supported by the backend."
   (interactive (list (svn-read-directory-name "psvn status directory: "
                                               nil default-directory nil)
                      current-prefix-arg))
-  (svn-call status dir dir arg))
+  (if (svn-registered dir)
+      (svn-call status dir dir arg)
+    (when (y-or-n-p
+           (concat dir
+                   " does not seem to be a working copy supported by psvn. "
+                   "Run dired instead? "))
+      (dired dir))))
 
 (defun svn-status-this-directory (arg)
   "Run `svn-status' for the `default-directory'"
