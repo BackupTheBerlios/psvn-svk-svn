@@ -217,6 +217,7 @@
 ;; * status
 ;; * status-base-dir
 ;; * status-show-svn-log
+;; * status-parse-commit-output
 ;; * status-parse-ar-output
 ;; * status-parse-info-result
 ;; * status-get-specific-revision-internal
@@ -1931,50 +1932,10 @@ When called with the prefix argument 0, use the full path name."
 ;; (svn-status-update-with-command-list '(("++ideas" committed) ("a.txt" committed) ("alf")))
 ;; (svn-status-update-with-command-list (svn-status-parse-commit-output))
 
-
 (defun svn-status-parse-commit-output ()
-  "Parse the output of svn commit.
+  "Parse the output of a commit operation.
 Return a list that is suitable for `svn-status-update-with-command-list'"
-  (save-excursion
-    (set-buffer "*svn-process*")
-    (let ((action)
-          (name)
-          (skip)
-          (result))
-      (goto-char (point-min))
-      (setq svn-status-commit-rev-number nil)
-      (setq skip nil) ; set to t whenever we find a line not about a committed file
-      (while (< (point) (point-max))
-        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
-               (setq skip t))
-              ((looking-at "Sending")
-               (setq action 'committed))
-              ((looking-at "Adding")
-               (setq action 'added))
-              ((looking-at "Deleting")
-               (setq action 'deleted))
-              ((looking-at "Transmitting file data")
-               (setq skip t))
-              ((looking-at "Committed revision \\([0-9]+\\)")
-               (setq svn-status-commit-rev-number
-                     (string-to-number (svn-match-string-no-properties 1)))
-               (setq skip t))
-              (t ;; this should never be needed(?)
-               (setq action 'unknown)))
-        (unless skip                                ;found an interesting line
-          (forward-char 15)
-          (when svn-status-operated-on-dot
-            ;; when the commit used . as argument, delete the trailing directory
-            ;; from the svn output
-            (search-forward "/" nil t))
-          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
-          (setq result (cons (list name action)
-                             result))
-          (setq skip nil))
-        (forward-line 1))
-      result)))
-;;(svn-status-parse-commit-output)
-;;(svn-status-annotate-status-buffer-entry)
+  (svn-call status-parse-commit-output nil))
 
 (defun svn-status-parse-ar-output ()
   "Parse the output of an add|remove operation.

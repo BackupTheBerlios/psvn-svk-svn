@@ -114,6 +114,47 @@
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
 
+(defun svn-svn-status-parse-commit-output ()
+  "Implementation of `svn-status-parse-commit-output' for the SVN backend."
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((action)
+          (name)
+          (skip)
+          (result))
+      (goto-char (point-min))
+      (setq svn-status-commit-rev-number nil)
+      (setq skip nil) ; set to t whenever we find a line not about a committed file
+      (while (< (point) (point-max))
+        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
+               (setq skip t))
+              ((looking-at "Sending")
+               (setq action 'committed))
+              ((looking-at "Adding")
+               (setq action 'added))
+              ((looking-at "Deleting")
+               (setq action 'deleted))
+              ((looking-at "Transmitting file data")
+               (setq skip t))
+              ((looking-at "Committed revision \\([0-9]+\\)")
+               (setq svn-status-commit-rev-number
+                     (string-to-number (svn-match-string-no-properties 1)))
+               (setq skip t))
+              (t ;; this should never be needed(?)
+               (setq action 'unknown)))
+        (unless skip                                ;found an interesting line
+          (forward-char 15)
+          (when svn-status-operated-on-dot
+            ;; when the commit used . as argument, delete the trailing directory
+            ;; from the svn output
+            (search-forward "/" nil t))
+          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
+          (setq result (cons (list name action)
+                             result))
+          (setq skip nil))
+        (forward-line 1))
+      result)))
+
 (defun svn-svn-status-parse-ar-output ()
   "Implementation of `svn-status-parse-ar-output' for the SVN backend."
   (save-excursion
