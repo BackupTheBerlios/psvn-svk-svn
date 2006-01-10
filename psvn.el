@@ -135,6 +135,7 @@
 ;; * Get rid of all byte-compiler warnings
 ;; * SVK working copy support
 ;;    - defcustom a few variables
+;;    - have commit work (in svn-process-sentinel, svn-status-update* stuff)
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
@@ -202,6 +203,7 @@
 ;; * status-info
 ;; * status-add-file-recursively
 ;; * status-add-file
+;; * status-revert
 
 ;;; Code:
 
@@ -991,6 +993,22 @@ the usual `process-environment'."
             collect elt))
 
 (defun svn-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
+  "Run the backend with arguments ARGLIST.
+
+If RUN-ASYNCHRON is t then run svn asynchronously.
+
+If CLEAR-PROCESS-BUFFER is t then erase the contents of the
+*svn-process* buffer before commencing.
+
+CMDTYPE is a symbol such as 'mv, 'revert, or 'add, representing the
+command to run.
+
+ARGLIST is a list of arguments \(which must include the command name,
+for example: '(\"revert\" \"file1\"\)
+ARGLIST is flattened and any every nil value is discarded.
+
+If the variable `svn-status-edit-svn-command' is non-nil then the user
+is prompted for give extra arguments, which are appended to ARGLIST."
   (svn-call run nil run-asynchron clear-process-buffer cmdtype arglist))
 
 (defalias 'svn-run-svn 'svn-run)
