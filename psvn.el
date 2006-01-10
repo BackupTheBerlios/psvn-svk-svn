@@ -192,6 +192,7 @@
 
 (require 'easymenu)
 (require 'diff-mode nil t)
+(require 'vc)
 
 ;;; user setable variables
 (defcustom svn-handled-backends '(SVN SVK)
