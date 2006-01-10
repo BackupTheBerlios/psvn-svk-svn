@@ -2555,11 +2555,10 @@ See `svn-status-marked-files' for what counts as selected."
   (svn-call status-show-svn-log nil arg))
 
 (defun svn-status-info ()
-  "Run `svn info' on all selected files.
+  "Get version control information on all selected files.
 See `svn-status-marked-files' for what counts as selected."
   (interactive)
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-  (svn-run-svn t t 'info "info" "--targets" svn-status-temp-arg-file))
+  (svn-call status-info nil))
 
 ;; Todo: add possiblity to specify the revision
 (defun svn-status-blame ()

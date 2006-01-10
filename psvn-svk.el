@@ -240,6 +240,12 @@ See `svn-status-marked-files' for what counts as selected."
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
 
+(defun svn-svk-status-info ()
+  "Run `svk info' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (let ((file-names (svn-status-marked-file-names)))
+    (if file-names (svn-run-svn t t 'info "info" "--" file-names))))
+
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 
