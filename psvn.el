@@ -195,7 +195,7 @@
 ;; impossible to abuse, as the commands that read them are used only in
 ;; buffers that are not visiting any files.  Better safe than sorry.
 
-;; Functions that should be supported by backends (calle svn-BACKEND-FUNC):
+;; Functions that should be supported by backends (called svn-BACKEND-FUNC):
 ;; * registered
 ;; * status
 ;; * run
