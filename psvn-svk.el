@@ -1,4 +1,4 @@
-;;; psvn.el --- Subversion interface for emacs
+;;; psvn-svk.el --- SVK support for psvn.el / Emacs
 ;; Copyright (C) 2002-2005 by Stefan Reichoer & intrigeri
 
 ;; Author: intrigeri <intrigeri@boum.org>
