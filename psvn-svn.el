@@ -154,16 +154,6 @@ is prompted for give extra arguments, which are appended to ARGLIST."
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
 
-(defun svn-svn-status-parse-info-result ()
-  (let ((url))
-    (save-excursion
-      (set-buffer "*svn-process*")
-      (goto-char (point-min))
-      (let ((case-fold-search t))
-        (search-forward "url: "))
-      (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
-    (setq svn-status-base-info `((url ,url)))))
-
 (defun svn-svn-status-parse-ar-output ()
   "Parse the output of svn add|remove.
 Return a list that is suitable for `svn-status-update-with-command-list'"
@@ -193,6 +183,16 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       result)))
 ;;(svn-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
+
+(defun svn-svn-status-parse-info-result ()
+  (let ((url))
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (goto-char (point-min))
+      (let ((case-fold-search t))
+        (search-forward "url: "))
+      (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
+    (setq svn-status-base-info `((url ,url)))))
 
 (defun svn-svn-status-svnversion ()
   "Run svnversion on the directory that contains the file at point."
