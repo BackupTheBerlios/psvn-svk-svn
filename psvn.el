@@ -139,12 +139,14 @@
 ;;         svn-status-parse-commit-output stuff
 ;;       . add svn-log-edit-erase-edit-buffer to svn-process-sentinel?
 ;;    - get rid of --targets option, which does not exist in SVK 1.06
+;;    - log-edit-done
 ;; * backend dispatching functions: better behaviour when a backend does not
 ;;   implement a function
 ;; * use the backend dispatching system for any function that builds/runs a
 ;;   command line
-;; * quote some arguments for the shell (filenames as args, filenames as
-;;   svn:ignore, etc.) ? see how VC does... or not.
+;; * since, --targets does not exist in SVK, the filenames have to be passed as
+;;   command line arguments; they should thus be quoted; it's the same for
+;;   svn:ignore arguments, btw. How? see how VC does... or not.
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
