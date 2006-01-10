@@ -56,6 +56,7 @@ If ARG then pass the -u argument to `svn status'."
                      "Run dired instead? "))
         (dired dir))
     (setq dir (file-name-as-directory dir))
+    (setq default-directory dir)
     (when svn-status-load-state-before-svn-status
       (unless (string= dir (car svn-status-directory-history))
         (svn-status-load-state t)))
@@ -75,8 +76,7 @@ If ARG then pass the -u argument to `svn status'."
         (set-buffer status-buf)
         (setq default-directory dir)
         (set-buffer proc-buf)
-        (setq default-directory dir
-              svn-status-remote (when arg t))
+        (setq svn-status-remote (when arg t))
         (svn-run-svn t t 'status "status" status-option)))))
 
 (defun svn-svn-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
@@ -152,6 +152,36 @@ is prompted for give extra arguments, which are appended to ARGLIST."
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
+
+(defun svn-svn-status-parse-ar-output ()
+  "Parse the output of svn add|remove.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((action)
+          (name)
+          (skip)
+          (result))
+      (goto-char (point-min))
+      (while (< (point) (point-max))
+        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
+               (setq skip t))
+              ((looking-at "A")
+               (setq action 'added-wc))
+              ((looking-at "D")
+               (setq action 'deleted-wc))
+              (t ;; this should never be needed(?)
+               (setq action 'unknown)))
+        (unless skip ;found an interesting line
+          (forward-char 10)
+          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
+          (setq result (cons (list name action)
+                             result))
+          (setq skip nil))
+        (forward-line 1))
+      result)))
+;;(svn-status-parse-ar-output)
+;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
 
 ;; --------------------------------------------------------------------------------
 ;; status persistent options

@@ -196,6 +196,7 @@
 ;; * registered
 ;; * run
 ;; * status-base-dir
+;; * status-parse-ar-output
 
 ;;; Code:
 
@@ -862,7 +863,8 @@ It is usually called via the `svn-call' macro."
   ;; BEWARE!! `file' is evaluated three times
   `(or (and ,file
             (svn-call-backend (svn-backend ,file) ',fun ,@args))
-       (svn-call-backend (svn-backend ,default-directory) ',fun ,@args)))
+       (and (svn-status-message 7 "svn-call: using %s as default-directory to run function %s on file %s" ,default-directory ',fun ,file)
+            (svn-call-backend (svn-backend ,default-directory) ',fun ,@args))))
 
 ;; Access functions to file properties
 
@@ -1924,34 +1926,9 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
 ;;(svn-status-annotate-status-buffer-entry)
 
 (defun svn-status-parse-ar-output ()
-  "Parse the output of svn add|remove.
+  "Parse the output of an add|remove operation.
 Return a list that is suitable for `svn-status-update-with-command-list'"
-  (save-excursion
-    (set-buffer "*svn-process*")
-    (let ((action)
-          (name)
-          (skip)
-          (result))
-      (goto-char (point-min))
-      (while (< (point) (point-max))
-        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
-               (setq skip t))
-              ((looking-at "A")
-               (setq action 'added-wc))
-              ((looking-at "D")
-               (setq action 'deleted-wc))
-              (t ;; this should never be needed(?)
-               (setq action 'unknown)))
-        (unless skip ;found an interesting line
-          (forward-char 10)
-          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
-          (setq result (cons (list name action)
-                             result))
-          (setq skip nil))
-        (forward-line 1))
-      result)))
-;;(svn-status-parse-ar-output)
-;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
+  (svn-call status-parse-ar-output nil))
 
 (defun svn-status-line-info->directory-p (line-info)
   "Return t if LINE-INFO refers to a directory, nil otherwise.
