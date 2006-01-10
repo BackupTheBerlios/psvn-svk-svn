@@ -41,6 +41,44 @@
       "_svn"
     ".svn"))
 
+;;;###autoload
+(defun svn-svn-status (dir &optional arg)
+  "Examine the status of Subversion working copy in directory DIR.
+If ARG then pass the -u argument to `svn status'."
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
+  (unless (file-directory-p dir)
+    (error "%s is not a directory" dir))
+  (if (not (file-exists-p (concat dir "/" (svn-svn-wc-adm-dir-name) "/")))
+      (when (y-or-n-p
+             (concat dir
+                     " does not seem to be a Subversion working copy (no "
+                     (svn-svn-wc-adm-dir-name) " directory).  "
+                     "Run dired instead? "))
+        (dired dir))
+    (setq dir (file-name-as-directory dir))
+    (when svn-status-load-state-before-svn-status
+      (unless (string= dir (car svn-status-directory-history))
+        (svn-status-load-state t)))
+    (setq svn-status-directory-history (delete dir svn-status-directory-history))
+    (add-to-list 'svn-status-directory-history dir)
+    (if (string= (buffer-name) svn-status-buffer-name)
+        (setq svn-status-display-new-status-buffer nil)
+      (setq svn-status-display-new-status-buffer t)
+      ;;(message "psvn: Saving initial window configuration")
+      (setq svn-status-initial-window-configuration (current-window-configuration)))
+    (let* ((status-buf (get-buffer-create svn-status-buffer-name))
+           (proc-buf (get-buffer-create "*svn-process*"))
+           (status-option (if svn-status-verbose
+                              (if arg "-uv" "-v")
+                            (if arg "-u" ""))))
+      (save-excursion
+        (set-buffer status-buf)
+        (setq default-directory dir)
+        (set-buffer proc-buf)
+        (setq default-directory dir
+              svn-status-remote (when arg t))
+        (svn-run-svn t t 'status "status" status-option)))))
+
 (provide 'psvn-svn)
 
 ;; Local Variables:
