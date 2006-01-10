@@ -2099,7 +2099,7 @@ Show the repository url after this call in the `svn-status-buffer-name' buffer.
 When called with the prefix argument 0, reset the information to nil.
 This hides the repository information again.
 
-When ARG is t, don't update the svn status buffer. This useful for
+When ARG is t, don't update the svn status buffer. This is useful for
 non-interactive use."
   (interactive "P")
   (if (eq arg 0)
