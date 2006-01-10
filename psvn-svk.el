@@ -31,7 +31,7 @@
 ;;     - svn-status-ediff-with-revision
 ;; * some functions can not work since they use --targets, which does not
 ;;   exist in SVK 1.06; quite easy to fix, though
-;; * 'svk export' does not exist.
+;; * 'svk export' does not exist; replace it by copy?
 ;; * svn-svk-status-base-dir: find the base checkout dir instead of cheating
 ;; * add SVK functions that SVN does not support
 ;; * use great ideas from vc-svk-co-* functions
@@ -211,7 +211,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
 ;;(svn-svk-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-svk-status-parse-ar-output))
 
-psvn.el(defun svn-svk-status-parse-info-result ()
+(defun svn-svk-status-parse-info-result ()
   (let ((url))
     (save-excursion
       (set-buffer "*svn-process*")
