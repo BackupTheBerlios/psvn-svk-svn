@@ -134,19 +134,17 @@
 ;; * Improve support for svn blame
 ;; * Get rid of all byte-compiler warnings
 ;; * SVK working copy support
-;;    - defcustom a few variables
 ;;    - have commit work:
 ;;       . in svn-process-sentinel, svn-status-update* and
 ;;         svn-status-parse-commit-output stuff
 ;;       . add svn-log-edit-erase-edit-buffer to svn-process-sentinel?
+;;    - defcustom a few variables
 ;; * backend dispatching functions: better behaviour when a backend does not
 ;;   implement a function
 ;; * backends: use specialized svn-*-run function instead of svn-run-svn, for speed
 ;; * use the backend dispatching system for any function that builds/runs a
 ;;   command line, even for functions currently shared by SVN and SVK
 ;; * use svn-run instead of svn-run-svn
-;; * reorganize code to cleanly separate the backends interface from the
-;;   default implementation
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
@@ -210,7 +208,7 @@
 ;; * the backend-specific (svn-BACKEND-FUNC) function, if it exists
 ;; * or svn-default-FUNC, as fallback.
 ;; Functions that have to be implemented by every backend,
-;; since no default implementation can be written:
+;; since there is no default implementation:
 ;; * registered
 ;; * status
 ;; * run
@@ -219,15 +217,13 @@
 ;; * status-parse-ar-output
 ;; * status-parse-info-result
 ;; * status-rm
-;; Functions that can optionnally be overriden in backends,
-;; if the default implementation does not suit them:
+;; Functions that can optionnally be overriden by backends,
+;; in case the default implementation does not suit them:
 ;; * status-info
 ;; * status-cleanup
 ;; * status-make-directory
 ;; * status-add-file-recursively
 ;; * status-add-file
-;; Functions that are currently in the backends, but that could probably be shared
-;; between SVN and SVK:
 ;; * status-revert
 ;; * status-update-cmd
 
@@ -2933,6 +2929,17 @@ the file at point."
     (message "adding: %s" (mapconcat 'identity file-names ", "))
     (svn-run t t 'add "add" "--non-recursive" "--" file-names)))
 
+(defun svn-default-status-revert ()
+  "Default implementation of svn-status-revert."
+  (let* ((file-names (svn-status-marked-file-names))
+         (num-of-files (length file-names)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "Revert %s? " (car file-names))
+             (format "Revert %d files? " num-of-files)))
+      (message "reverting: %s" (mapconcat 'identity file-names ", "))
+      (svn-run t t 'revert "revert" "--" (mapcar 'shell-quote-argument file-names)))))
+
 (defun svn-default-status-make-directory (dir)
   "Default implementation of svn-status-make-directory."
   (unless (string-match "^[^:/]+://" dir) ; Is it a URI?
@@ -2947,6 +2954,12 @@ the file at point."
           (message "svn-status-cleanup %S" file-names)
           (svn-run t t 'cleanup "cleanup" "--" file-names))
       (message "No valid file selected - No status cleanup possible"))))
+
+(defun svn-default-status-update-cmd ()
+  "Default implementation of svn-status-update-cmd."  
+  (message "Updating working copy at %s" default-directory)
+  ;TODO: use file names also
+  (svn-run t t 'update "update"))
 
 ;; --------------------------------------------------------------------------------
 ;; Update the `svn-status-buffer-name' buffer, when a file is saved

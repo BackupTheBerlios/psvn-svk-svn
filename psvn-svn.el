@@ -235,18 +235,20 @@ See `svn-status-marked-files' for what counts as selected."
 ;   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
 ;   (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
 
-(defun svn-svn-status-revert ()
-  "Run `svn revert' on all selected files.
-See `svn-status-marked-files' for what counts as selected."
-  (let* ((marked-files (svn-status-marked-files))
-         (num-of-files (length marked-files)))
-    (when (yes-or-no-p
-           (if (= 1 num-of-files)
-               (format "Revert %s? " (svn-status-line-info->filename (car marked-files)))
-             (format "Revert %d files? " num-of-files)))
-      (message "reverting: %S" (svn-status-marked-file-names))
-      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-      (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
+
+;; not needed since svn-default-status-revert works for SVN
+; (defun svn-svn-status-revert ()
+;   "Run `svn revert' on all selected files.
+; See `svn-status-marked-files' for what counts as selected."
+;   (let* ((marked-files (svn-status-marked-files))
+;          (num-of-files (length marked-files)))
+;     (when (yes-or-no-p
+;            (if (= 1 num-of-files)
+;                (format "Revert %s? " (svn-status-line-info->filename (car marked-files)))
+;              (format "Revert %d files? " num-of-files)))
+;       (message "reverting: %S" (svn-status-marked-file-names))
+;       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+;       (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
 
 (defun svn-svn-status-rm (force)
   "Run `svn rm' on all selected files.
@@ -263,12 +265,6 @@ When called with a prefix argument add the command line switch --force."
       (if force
           (svn-run-svn t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
         (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
-
-(defun svn-svn-status-update-cmd ()
-  "Implements svn-status-update-cmd for SVN backend."
-  (message "Running svn-update for %s" default-directory)
-  ;TODO: use file names also
-  (svn-run-svn t t 'update "update"))
 
 (defun svn-svn-status-get-specific-revision-internal (line-infos revision)
   "Implements svn-status-get-specific-revision-internal for SVN backend."

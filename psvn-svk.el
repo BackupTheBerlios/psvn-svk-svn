@@ -238,18 +238,6 @@ See `svn-status-marked-files' for what counts as selected."
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
 
-(defun svn-svk-status-revert ()
-  "Run `svk revert' on all selected files.
-See `svn-status-marked-files' for what counts as selected."
-  (let* ((file-names (svn-status-marked-file-names))
-         (num-of-files (length file-names)))
-    (when (yes-or-no-p
-           (if (= 1 num-of-files)
-               (format "Revert %s? " (car file-names))
-             (format "Revert %d files? " num-of-files)))
-      (message "reverting: %s" (mapconcat 'identity file-names ", "))
-      (svn-run-svn t t 'revert "revert" "--" (mapcar 'shell-quote-argument file-names)))))
-
 (defun svn-svk-status-rm (force)
   "Run `svk rm' on all selected files.
 See `svn-status-marked-files' for what counts as selected."
@@ -261,12 +249,6 @@ See `svn-status-marked-files' for what counts as selected."
              (format "Remove %d files? " num-of-files)))
       (message "removing: %s" (mapconcat 'identity file-names ", "))
       (svn-run-svn t t 'rm "rm" "--" file-names))))
-
-(defun svn-svk-status-update-cmd ()
-  "Run `svk update'."
-  (message "Running svk-update for %s" default-directory)
-  ;TODO: use file names also
-  (svn-run-svn t t 'update "update"))
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 
