@@ -139,6 +139,8 @@
 ;;       . in svn-process-sentinel, svn-status-update* and
 ;;         svn-status-parse-commit-output stuff
 ;;       . add svn-log-edit-erase-edit-buffer to svn-process-sentinel?
+;; * backend dispatching functions: better behaviour when a backend does not
+;;   implement a function
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
@@ -207,6 +209,7 @@
 ;; * status-add-file-recursively
 ;; * status-add-file
 ;; * status-revert
+;; * status-rm
 
 ;;; Code:
 
@@ -2813,21 +2816,12 @@ See `svn-status-marked-files' for what counts as selected."
   (svn-call status-revert nil))
 
 (defun svn-status-rm (force)
-  "Run `svn rm' on all selected files.
+  "Remove selected files from version control.
 See `svn-status-marked-files' for what counts as selected.
-When called with a prefix argument add the command line switch --force."
+When called with a prefix argument, use the --force option if the backend
+supports it."
   (interactive "P")
-  (let* ((marked-files (svn-status-marked-files))
-         (num-of-files (length marked-files)))
-    (when (yes-or-no-p
-           (if (= 1 num-of-files)
-               (format "%sRemove %s? " (if force "Force " "") (svn-status-line-info->filename (car marked-files)))
-             (format "%sRemove %d files? " (if force "Force " "") num-of-files)))
-      (message "removing: %S" (svn-status-marked-file-names))
-      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-      (if force
-          (svn-run-svn t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
-        (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
+  (svn-call status-rm nil))
 
 (defun svn-status-update-cmd ()
   "Run svn update."

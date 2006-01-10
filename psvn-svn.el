@@ -252,6 +252,22 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (svn-run-svn t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
 
+(defun svn-svn-status-rm (force)
+  "Run `svn rm' on all selected files.
+See `svn-status-marked-files' for what counts as selected.
+When called with a prefix argument add the command line switch --force."
+  (let* ((marked-files (svn-status-marked-files))
+         (num-of-files (length marked-files)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "%sRemove %s? " (if force "Force " "") (svn-status-line-info->filename (car marked-files)))
+             (format "%sRemove %d files? " (if force "Force " "") num-of-files)))
+      (message "removing: %S" (svn-status-marked-file-names))
+      (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+      (if force
+          (svn-run-svn t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+        (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
+
 (defun svn-svn-status-svnversion ()
   "Run svnversion on the directory that contains the file at point."
   (svn-status-ensure-cursor-on-file)

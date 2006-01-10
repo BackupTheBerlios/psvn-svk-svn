@@ -278,6 +278,18 @@ See `svn-status-marked-files' for what counts as selected."
       (message "reverting: %s" (mapconcat 'identity file-names ", "))
       (svn-run-svn t t 'revert "revert" "--" (mapcar 'shell-quote-argument file-names)))))
 
+(defun svn-svk-status-rm (force)
+  "Run `svn rm' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (let* ((file-names (svn-status-marked-file-names))
+         (num-of-files (length file-names)))
+    (when (yes-or-no-p
+           (if (= 1 num-of-files)
+               (format "Remove %s? " (car file-names))
+             (format "Remove %d files? " num-of-files)))
+      (message "removing: %s" (mapconcat 'identity file-names ", "))
+      (svn-run-svn t t 'rm "rm" "--" file-names))))
+
 ;;; Aux. functions that will often avoid slow calls to svk.
 
 (defvar svn-svk-co-paths nil)
