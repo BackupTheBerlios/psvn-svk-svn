@@ -195,7 +195,7 @@
 (require 'diff-mode nil t)
 
 ;;; user setable variables
-(defcustom svn-handled-backends '(SVN SVK)
+(defcustom svn-handled-backends '(SVN)
   "*List of version control backends for which psvn will be used.
 Entries in this list will be tried in order to determine whether a
 file is under that sort of version control.
@@ -802,7 +802,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 
 (defun svn-make-backend-sym (backend sym)
   "Return BACKEND-specific version of psvn symbol SYM."
-  (intern (concat "svn-" (downcase backend)
+  (intern (concat "svn-" (downcase (symbol-name backend))
                   "-" (symbol-name sym))))
 
 (defun svn-find-backend-function (backend fun)
@@ -812,9 +812,9 @@ if that doesn't exist either, return nil."
   (let ((f (svn-make-backend-sym backend fun)))
     (if (fboundp f) f
       ;; Load psvn-BACKEND.el if needed.
-      (require (intern (concat "psvn-" (downcase backend)))))
+      (require (intern (concat "psvn-" (downcase (symbol-name backend))))))
       (if (fboundp f) f
-	(let ((def (svn-make-backend-sym "default" fun)))
+	(let ((def (svn-make-backend-sym 'default fun)))
 	  (if (fboundp def) (cons def backend) nil)))))
 
 (defun svn-call-backend (backend function-name &rest args)
@@ -857,10 +857,6 @@ file was previously registered under a certain backend, then that
 backend is tried first."
   (let (handler)
     (cond
-     ((and
-       (file-name-directory file)
-       (string-match svn-ignore-dir-regexp (file-name-directory file)))
-      nil)
      ((and (boundp 'file-name-handler-alist)
           (setq handler (find-file-name-handler file 'svn-registered)))
       ;; handler should set svn-backend and return t if registered
@@ -897,14 +893,6 @@ backend is tried first."
 		   (svn-file-getprop file 'svn-backend)
 		 nil))))))
 
-
-;; named after SVN_WC_ADM_DIR_NAME in svn_wc.h
-(defun svn-wc-adm-dir-name ()
-  "Return the name of the \".svn\" subdirectory or equivalent."
-  (if (and (eq system-type 'windows-nt)
-           (getenv "SVN_ASP_DOT_NET_HACK"))
-      "_svn"
-    ".svn"))
 
 (defun svn-status-message (level &rest args)
   "If LEVEL is lower than `svn-status-debug-level' print ARGS using `message'.

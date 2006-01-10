@@ -22,6 +22,20 @@
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
+(defun svn-svn-registered (file)
+  "Return true if FILE is registered under Subversion."
+  ;; a quick false positive test: is there a `.svn/entries' file?
+  (file-exists-p (expand-file-name ".svn/entries"
+                                        (file-name-directory file))))
+
+;; named after SVN_WC_ADM_DIR_NAME in svn_wc.h
+(defun svn-svn-wc-adm-dir-name ()
+  "Return the name of the \".svn\" subdirectory or equivalent."
+  (if (and (eq system-type 'windows-nt)
+           (getenv "SVN_ASP_DOT_NET_HACK"))
+      "_svn"
+    ".svn"))
+
 (provide 'psvn-svn)
 
 ;; Local Variables:
