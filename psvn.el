@@ -2565,7 +2565,7 @@ See `svn-status-marked-files' for what counts as selected."
   "Run `svn blame' on the current file."
   (interactive)
   ;;(svn-run-svn t t 'blame "blame" "-r" "BASE" (svn-status-line-info->filename (svn-status-get-line-information))))
-  (svn-run-svn t t 'blame "blame" (svn-status-line-info->filename (svn-status-get-line-information))))
+  (svn-run-svn t t 'blame "blame" "--" (svn-status-line-info->filename (svn-status-get-line-information))))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -2611,6 +2611,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
                                 "HEAD" "BASE")
                           revision)
                    (unless recursive "--non-recursive")
+                   "--"
                    (svn-status-line-info->filename line-info))
       (setq clear-buf nil)
 
