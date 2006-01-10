@@ -136,7 +136,8 @@
 ;; * SVK working copy support
 ;;    - defcustom a few variables
 ;;    - have commit work:
-;;       . in svn-process-sentinel, svn-status-update* stuff
+;;       . in svn-process-sentinel, svn-status-update* and
+;;         svn-status-parse-commit-output stuff
 ;;       . add svn-log-edit-erase-edit-buffer to svn-process-sentinel?
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
