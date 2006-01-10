@@ -277,6 +277,14 @@ This can be either absolute or looked up on `exec-path'."
   :group 'psvn)
 (put 'svn-status-svn-executable 'risky-local-variable t)
 
+(defcustom svn-status-svk-executable "svk"
+  "*The name of the svk executable.
+This can be either absolute or looked up on `exec-path'."
+  ;; Don't use (file :must-match t).  It doesn't know about `exec-path'.
+  :type 'file
+  :group 'psvn)
+(put 'svn-status-svk-executable 'risky-local-variable t)
+
 (defcustom svn-status-default-export-directory "~/" "*The default directory that is suggested svn export."
   :type 'file
   :group 'psvn)
@@ -924,10 +932,10 @@ inside loops."
 (defun svn-status (dir &optional arg)
   "Examine the status of a working copy in directory DIR.
 If ARG then also update the working copy, if supported by the backend."
-  (interactive (list (svn-read-directory-name "Status directory: "
+  (interactive (list (svn-read-directory-name "psvn status directory: "
                                               nil default-directory nil)
                      current-prefix-arg))
-  (svn-call status nil dir arg))
+  (svn-call status dir dir arg))
 
 (defun svn-status-this-directory (arg)
   "Run `svn-status' for the `default-directory'"

@@ -86,8 +86,83 @@
         (setq default-directory dir)
         (set-buffer proc-buf)
         (setq default-directory dir
-              svk-status-remote (when arg t))
+              svn-status-remote (when arg t))
         (svn-svk-run t t 'status "status" status-option)))))
+
+(defun svn-svk-run (run-asynchron clear-process-buffer cmdtype &rest arglist)
+  "Run svk with arguments ARGLIST.
+
+If RUN-ASYNCHRON is t then run svk asynchronously.
+
+If CLEAR-PROCESS-BUFFER is t then erase the contents of the
+*svn-process* buffer before commencing.
+
+CMDTYPE is a symbol such as 'mv, 'revert, or 'add, representing the
+command to run.
+
+ARGLIST is a list of arguments \(which must include the command name,
+for example: '(\"revert\" \"file1\"\)
+ARGLIST is flattened and any every nil value is discarded.
+
+If the variable `svn-status-edit-svn-command' is non-nil then the user
+is prompted for give extra arguments, which are appended to ARGLIST."
+  (setq arglist (svn-status-flatten-list arglist))
+  (if (eq (process-status "svk") nil)
+      (progn
+        (when svn-status-edit-svn-command
+          (setq arglist (append arglist
+                                (split-string
+                                 (read-from-minibuffer
+                                  (format "Run `svk %s' with extra arguments: "
+                                          (mapconcat 'identity arglist " "))))))
+          (when (eq svn-status-edit-svn-command t)
+            (svn-status-toggle-edit-cmd-flag t))
+          (message "svn-svk-run %s: %S" cmdtype arglist))
+        (let* ((proc-buf (get-buffer-create "*svn-process*"))
+               (svn-exe svn-status-svk-executable)
+               (svn-proc))
+          (when (listp (car arglist))
+            (setq arglist (car arglist)))
+          (save-excursion
+            (set-buffer proc-buf)
+            (when svn-status-coding-system
+              (setq buffer-file-coding-system svn-status-coding-system))
+            (setq buffer-read-only nil)
+            (fundamental-mode)
+            (if clear-process-buffer
+                (delete-region (point-min) (point-max))
+              (goto-char (point-max)))
+            (setq svn-process-cmd cmdtype)
+            (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
+            (svn-status-update-mode-line)
+            (sit-for 0.1)
+            (if run-asynchron
+                (progn
+                  (message "running asynchron: %s %S" svn-exe arglist)
+                  (sit-for 7)
+                  (let ((process-environment (svn-process-environment))
+                        (process-connection-type nil))
+                    ;; Communicate with the subprocess via pipes rather
+                    ;; than via a pseudoterminal, so that if the svk+ssh
+                    ;; scheme is being used, SSH will not ask for a
+                    ;; passphrase via stdio; psvn.el is currently unable
+                    ;; to answer such prompts.  Instead, SSH will run
+                    ;; x11-ssh-askpass if possible.  If Emacs is being
+                    ;; run on a TTY without $DISPLAY, this will fail; in
+                    ;; such cases, the user should start ssh-agent and
+                    ;; then run ssh-add explicitly.
+                    (setq svn-proc (apply 'start-process "svk" proc-buf svn-exe arglist)))
+                  (set-process-sentinel svn-proc 'svn-process-sentinel)
+                  (when svn-status-track-user-input
+                    (set-process-filter svn-proc 'svn-process-filter)))
+              (message "running synchron: %s %S" svn-exe arglist)
+              (let ((process-environment (svn-process-environment)))
+                ;; `call-process' ignores `process-connection-type' and
+                ;; never opens a pseudoterminal.
+                (apply 'call-process svn-exe nil proc-buf nil arglist))
+              (setq svn-status-mode-line-process-status "")
+              (svn-status-update-mode-line)))))
+    (error "You can only run one svk process at once!")))
 
 
 ;;; Aux. functions that will often avoid slow calls to svk.
