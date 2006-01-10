@@ -2679,15 +2679,12 @@ When this function is called with a prefix argument, use the actual file instead
   (svn-call status-add-file-recursively nil arg))
 
 (defun svn-status-add-file (arg)
-  "Run `svn add' on all selected files.
-When a directory is added, don't add the files of the directory
- (svn add --non-recursive <file-list> is called).
+  "Add the selected files to the working copy.
+When a directory is added, don't add the files of the directory.
 See `svn-status-marked-files' for what counts as selected.
 When this function is called with a prefix argument, use the actual file instead."
   (interactive "P")
-  (message "adding: %S" (svn-status-get-file-list-names (not arg)))
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
-  (svn-run-svn t t 'add "add" "--non-recursive" "--targets" svn-status-temp-arg-file))
+  (svn-call status-add-file nil arg))
 
 (defun svn-status-make-directory (dir)
   "Run `svn mkdir DIR'."

@@ -255,6 +255,15 @@ When this function is called with a prefix argument, use the actual file instead
     (message "adding: %s"  (mapconcat 'identity file-names ", "))
     (svn-run-svn t t 'add "add" "--" file-names)))
 
+(defun svn-svk-status-add-file (arg)
+  "Run `svk add' on all selected files.
+When a directory is added, don't add the files of the directory
+ (svk add --non-recursive <file-list> is called).
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
+    (message "adding: %s" (mapconcat 'identity file-names ", "))
+    (svn-run-svn t t 'add "add" "--non-recursive" "--" file-names)))
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 
