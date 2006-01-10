@@ -290,6 +290,12 @@ See `svn-status-marked-files' for what counts as selected."
       (message "removing: %s" (mapconcat 'identity file-names ", "))
       (svn-run-svn t t 'rm "rm" "--" file-names))))
 
+(defun svn-svk-status-update-cmd ()
+  "Run `svk update'."
+  (message "Running svk-update for %s" default-directory)
+  ;TODO: use file names also
+  (svn-run-svn t t 'update "update"))
+
 ;;; Aux. functions that will often avoid slow calls to svk.
 
 (defvar svn-svk-co-paths nil)

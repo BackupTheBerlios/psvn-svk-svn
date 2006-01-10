@@ -268,6 +268,12 @@ When called with a prefix argument add the command line switch --force."
           (svn-run-svn t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
         (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
+(defun svn-svn-status-update-cmd ()
+  "Run `svn update'."
+  (message "Running svn-update for %s" default-directory)
+  ;TODO: use file names also
+  (svn-run-svn t t 'update "update"))
+
 (defun svn-svn-status-svnversion ()
   "Run svnversion on the directory that contains the file at point."
   (svn-status-ensure-cursor-on-file)

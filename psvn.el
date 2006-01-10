@@ -210,6 +210,7 @@
 ;; * status-add-file
 ;; * status-revert
 ;; * status-rm
+;; * status-update-cmd
 
 ;;; Code:
 
@@ -2824,11 +2825,9 @@ supports it."
   (svn-call status-rm nil))
 
 (defun svn-status-update-cmd ()
-  "Run svn update."
+  "Bring changes from the repository into the working copy."
   (interactive)
-  (message "Running svn-update for %s" default-directory)
-  ;TODO: use file names also
-  (svn-run-svn t t 'update "update"))
+  (svn-call status-update-cmd nil))
 
 (defun svn-status-commit ()
   "Commit selected files.
