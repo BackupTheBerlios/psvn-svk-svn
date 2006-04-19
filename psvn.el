@@ -2841,6 +2841,16 @@ If no files have been marked, commit recursively the file at point."
         (insert-file-contents svn-log-edit-file-name)))
     (svn-log-edit-mode)))
 
+(defun svn-status-switch-to-status-buffer ()
+  "Switch to the `svn-status-buffer-name' buffer."
+  (interactive)
+  (switch-to-buffer svn-status-buffer-name))
+
+(defun svn-status-pop-to-status-buffer ()
+  "Pop to the `svn-status-buffer-name' buffer."
+  (interactive)
+  (pop-to-buffer svn-status-buffer-name))
+
 (defun svn-status-export ()
   "Export the current working copy to an unversioned directory.
 Ask the user for the destination path.
