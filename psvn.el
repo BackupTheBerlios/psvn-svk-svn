@@ -151,6 +151,7 @@
 ;;   command line arguments; they should thus be quoted; it's the same for
 ;;   svn:ignore arguments, btw. How? see how VC does... or not.
 ;; * have svn-examine work for SVK too
+;; * sync svn-status cvs-examine support from Stefan's psvn repo
 ;; * multiple independent buffers in svn-status-mode
 ;; There are "TODO" comments in other parts of this file as well.
 
@@ -989,9 +990,16 @@ inside loops."
 
 ;;;###autoload
 (defun svn-status (dir &optional arg)
-  "Examine the status of a working copy in directory DIR.
-If ARG then also update the working copy, if supported by the backend."
-  (interactive (list (svn-read-directory-name "psvn status directory: "
+  "Examine the status of Subversion working copy in directory DIR.
+If ARG is -, allow editing of the parameters. One could add -N to
+run the status command non recursively to make it faster.
+For every other non nil ARG, then also update the working copy,
+if supported by the backend.
+
+If the directory DIR is not supported by any psvn backend,
+examine if there is CVS and run `cvs-examine'. Otherwise ask if
+to run `dired'."
+  (interactive (list (svn-read-directory-name "SVN status directory: "
                                               nil default-directory nil)
                      current-prefix-arg))
   (if (svn-registered dir)
@@ -1055,7 +1063,7 @@ for example: '(\"revert\" \"file1\"\)
 ARGLIST is flattened and any every nil value is discarded.
 
 If the variable `svn-status-edit-svn-command' is non-nil then the user
-is prompted for give extra arguments, which are appended to ARGLIST."
+can edit ARGLIST before running the backend."
   (svn-call run nil run-asynchron clear-process-buffer cmdtype arglist))
 
 (defalias 'svn-run-svn 'svn-run)

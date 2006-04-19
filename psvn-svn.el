@@ -64,8 +64,8 @@
           (setq arglist (append arglist
                                 (split-string
                                  (read-from-minibuffer
-                                  (format "Run `svn %s' with extra arguments: "
-                                          (mapconcat 'identity arglist " "))))))
+                                  (format "svn %s flags: " (car arglist))
+                                  (mapconcat 'identity (cdr arglist) " ")))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-svn-run %s: %S" cmdtype arglist))
