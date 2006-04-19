@@ -130,6 +130,7 @@ This can be either absolute or looked up on `exec-path'."
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
+                  (setq svn-pre-run-asynch-recent-keys (recent-keys))
                   (let ((process-environment (svn-process-environment))
                         (process-connection-type nil))
                     ;; Communicate with the subprocess via pipes rather
