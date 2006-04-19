@@ -225,6 +225,7 @@
 ;; * status-parse-commit-output
 ;; * status-parse-ar-output
 ;; * status-parse-info-result
+;; * status-parse-property-output
 ;; * status-get-specific-revision-internal
 ;; Functions that can optionally be overriden by backends,
 ;; in case the default implementation does not suit them:
@@ -2003,6 +2004,21 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
   "Parse the output of an add|remove operation.
 Return a list that is suitable for `svn-status-update-with-command-list'"
   (svn-call status-parse-ar-output nil))
+
+(defun svn-status-parse-property-output ()
+  "Parse the output of an info operation.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (svn-call status-parse-property-output nil))  
+  
+(defun svn-status-line-info->symlink-p (line-info)
+  "Return non-nil if LINE-INFO refers to a symlink, nil otherwise.
+The value is the name of the file to which it is linked. \(See
+`file-symlink-p'.\)
+
+On win32 systems this won't work, even though symlinks are supported
+by subversion on such systems."
+  ;; on win32 would need to see how svn does symlinks
+  (file-symlink-p (svn-status-line-info->filename line-info)))
 
 (defun svn-status-line-info->directory-p (line-info)
   "Return t if LINE-INFO refers to a directory, nil otherwise.

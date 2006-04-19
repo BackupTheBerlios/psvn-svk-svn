@@ -31,7 +31,6 @@
                      "Run dired instead? "))
         (dired dir))
     (setq dir (file-name-as-directory dir))
-    (setq default-directory dir)
     (when svn-status-load-state-before-svn-status
       (unless (string= dir (car svn-status-directory-history))
         (svn-status-load-state t)))
@@ -44,9 +43,14 @@
       (setq svn-status-initial-window-configuration (current-window-configuration)))
     (let* ((status-buf (get-buffer-create svn-status-buffer-name))
            (proc-buf (get-buffer-create "*svn-process*"))
-           (status-option (if svn-status-verbose
+           (want-edit (eq arg '-))
+           (status-option (if want-edit
+                            (if svn-status-verbose "-v" "")
+                          (if svn-status-verbose
                               (if arg "-uv" "-v")
                             (if arg "-u" ""))))
+         (svn-status-edit-svn-command
+          (or want-edit svn-status-edit-svn-command)))
       (save-excursion
         (set-buffer status-buf)
         (setq default-directory dir)
@@ -61,11 +65,12 @@
   (if (eq (process-status "svn") nil)
       (progn
         (when svn-status-edit-svn-command
-          (setq arglist (append arglist
-                                (split-string
-                                 (read-from-minibuffer
-                                  (format "svn %s flags: " (car arglist))
-                                  (mapconcat 'identity (cdr arglist) " ")))))
+          (setq arglist (append
+                         (list (car arglist))
+                         (split-string
+                          (read-from-minibuffer
+                           (format "svn %s flags: " (car arglist))
+                           (mapconcat 'identity (cdr arglist) " ")))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-svn-run %s: %S" cmdtype arglist))
@@ -90,6 +95,7 @@
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
+                  (setq svn-pre-run-asynch-recent-keys (recent-keys))
                   (let ((process-environment (svn-process-environment))
                         (process-connection-type nil))
                     ;; Communicate with the subprocess via pipes rather
@@ -134,6 +140,8 @@
                (setq action 'added))
               ((looking-at "Deleting")
                (setq action 'deleted))
+              ((looking-at "Replacing")
+               (setq action 'replaced))
               ((looking-at "Transmitting file data")
                (setq skip t))
               ((looking-at "Committed revision \\([0-9]+\\)")
@@ -154,6 +162,8 @@
           (setq skip nil))
         (forward-line 1))
       result)))
+;;(svn-status-parse-commit-output)
+;;(svn-status-annotate-status-buffer-entry)
 
 (defun svn-svn-status-parse-ar-output ()
   "Implementation of `svn-status-parse-ar-output' for the SVN backend."
@@ -181,8 +191,20 @@
           (setq skip nil))
         (forward-line 1))
       result)))
-;;(svn-status-parse-ar-output)
+;; (svn-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
+
+(defun svn-svn-status-parse-property-output ()
+  "Implementation of `svn-status-parse-property-output' for the SVN backend."
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((result))
+      (dolist (line (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
+        (message "%s" line)
+        (when (string-match "property '\\(.+\\)' set on '\\(.+\\)'" line)
+          ;;(message "property %s - file %s" (match-string 1 line) (match-string 2 line))
+          (setq result (cons (list (match-string 2 line) 'propset) result))))
+      result)))
 
 (defun svn-svn-status-parse-info-result ()
   "Implementation of `svn-status-parse-info-result' for the SVN backend."
@@ -206,6 +228,13 @@
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
+
+(defun svn-svn-status-info ()
+  "Run `svn info' on all selected files.
+See `svn-status-marked-files' for what counts as selected."
+  (interactive)
+  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+  (svn-run t t 'info "info" "--targets" svn-status-temp-arg-file))
 
 (defun svn-svn-status-rm (force)
   "Implementation of `svn-status-rm' for the SVN backend."
