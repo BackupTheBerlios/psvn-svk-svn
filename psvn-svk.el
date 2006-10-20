@@ -20,6 +20,8 @@
 
 ;;; init
 
+(require 'time-date)
+
 ; better keep 'SVN first
 (add-to-list 'svn-handled-backends 'SVK t)
 
