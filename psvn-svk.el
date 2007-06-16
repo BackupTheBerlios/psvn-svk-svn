@@ -82,7 +82,6 @@ If TEST is omitted or nil, `equal' is used."
 ;;;###autoload
 (defun svn-svk-status (dir &optional arg)
   "Implementation of `svn-status' for the SVK backend."
-  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
   (if (not (svn-svk-registered dir))
@@ -102,7 +101,7 @@ If TEST is omitted or nil, `equal' is used."
       (setq svn-status-display-new-status-buffer t)
       (setq svn-status-initial-window-configuration (current-window-configuration)))
     (let* ((status-buf (get-buffer-create svn-status-buffer-name))
-           (proc-buf (get-buffer-create "*svn-process*"))
+           (proc-buf (get-buffer-create svn-process-buffer-name))
            (status-option (if svn-status-verbose "-v" "")))
       (save-excursion
         (set-buffer status-buf)
@@ -118,32 +117,39 @@ If TEST is omitted or nil, `equal' is used."
   (if (eq (process-status "svk") nil)
       (progn
         (when svn-status-edit-svn-command
-          (setq arglist (append arglist
-                                (split-string
-                                 (read-from-minibuffer
-                                  (format "Run `svk %s' with extra arguments: "
-                                          (mapconcat 'identity arglist " "))))))
+          (setq arglist (append
+                         (list (car arglist))
+                         (split-string
+                          (read-from-minibuffer
+                           (format "svk %s flags: " (car arglist))
+                           (mapconcat 'identity (cdr arglist) " ")))))
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-svk-run %s: %S" cmdtype arglist))
-        (let* ((proc-buf (get-buffer-create "*svn-process*"))
-               (svn-exe svn-status-svk-executable)
+        (run-hooks 'svn-pre-run-hook)
+        (unless (eq mode-line-process 'svn-status-mode-line-process)
+          (setq svn-pre-run-mode-line-process mode-line-process)
+          (setq mode-line-process 'svn-status-mode-line-process))
+        (setq svn-status-pre-run-svn-buffer (current-buffer))
+        (let* ((proc-buf (get-buffer-create svn-process-buffer-name))
+               (svn-exe svn-status-svn-executable)
                (svn-proc))
           (when (listp (car arglist))
             (setq arglist (car arglist)))
           (save-excursion
             (set-buffer proc-buf)
-            (when svn-status-coding-system
-              (setq buffer-file-coding-system svn-status-coding-system))
             (setq buffer-read-only nil)
+            (buffer-disable-undo)
             (fundamental-mode)
             (if clear-process-buffer
                 (delete-region (point-min) (point-max))
               (goto-char (point-max)))
             (setq svn-process-cmd cmdtype)
+            (setq svn-status-last-commit-author nil)
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
+            (ring-insert svn-last-cmd-ring (list (current-time-string) arglist default-directory))
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
@@ -151,7 +157,7 @@ If TEST is omitted or nil, `equal' is used."
                   (let ((process-environment (svn-process-environment))
                         (process-connection-type nil))
                     ;; Communicate with the subprocess via pipes rather
-                    ;; than via a pseudoterminal, so that if the svk+ssh
+                    ;; than via a pseudoterminal, so that if the svn+ssh
                     ;; scheme is being used, SSH will not ask for a
                     ;; passphrase via stdio; psvn.el is currently unable
                     ;; to answer such prompts.  Instead, SSH will run
@@ -160,22 +166,30 @@ If TEST is omitted or nil, `equal' is used."
                     ;; such cases, the user should start ssh-agent and
                     ;; then run ssh-add explicitly.
                     (setq svn-proc (apply 'start-process "svk" proc-buf svn-exe arglist)))
+                  (when svn-status-svn-process-coding-system
+                    (set-process-coding-system svn-proc svn-status-svn-process-coding-system
+                                               svn-status-svn-process-coding-system))
                   (set-process-sentinel svn-proc 'svn-process-sentinel)
                   (when svn-status-track-user-input
                     (set-process-filter svn-proc 'svn-process-filter)))
-              (message "running synchron: %s %S" svn-exe arglist)
+              ;;(message "running synchron: %s %S" svn-exe arglist)
               (let ((process-environment (svn-process-environment)))
                 ;; `call-process' ignores `process-connection-type' and
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
+              (setq svn-status-last-output-buffer-name svn-process-buffer-name)
+              (run-hooks 'svn-post-process-svn-output-hook)
               (setq svn-status-mode-line-process-status "")
-              (svn-status-update-mode-line)))))
+              (svn-status-update-mode-line)
+              (when svn-pre-run-mode-line-process
+                (setq mode-line-process svn-pre-run-mode-line-process)
+                (setq svn-pre-run-mode-line-process nil))))))
     (error "You can only run one svk process at once!")))
 
 (defun svn-svk-status-parse-ar-output ()
   "Implementation of `svn-status-parse-ar-output' for the SVK backend."
   (save-excursion
-    (set-buffer "*svn-process*")
+    (set-buffer svn-process-buffer-name)
     (let ((action)
           (name)
           (skip)
@@ -201,14 +215,16 @@ If TEST is omitted or nil, `equal' is used."
 
 (defun svn-svk-status-parse-info-result ()
   "Implementation of `svn-status-parse-info-result' for the SVK backend."
-  (let ((url))
+  (let ((url)
+        (repository-root)
+        (last-changed-author))
     (save-excursion
-      (set-buffer "*svn-process*")
+      (set-buffer svn-process-buffer-name)
       (goto-char (point-min))
       (let ((case-fold-search t))
-        (search-forward "Depot Path: "))
-      (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
-    (setq svn-status-base-info `((url ,url)))))
+        (search-forward "Depot Path: ")
+        (setq url (buffer-substring-no-properties (point) (svn-point-at-eol)))))
+    (setq svn-status-base-info `((url ,url) ))))
 
 (defun svn-svk-status-show-svn-log (arg)
   "Implementation of `svn-status-show-svn-log' for the SVK backend."
@@ -218,19 +234,75 @@ If TEST is omitted or nil, `equal' is used."
                         (t           svn-status-default-log-arguments))))
     (svn-svk-run t t 'log "log" switches)
     (save-excursion
-      (set-buffer "*svn-process*")
+      (set-buffer svn-process-buffer-name)
       (svn-log-view-mode))))
 
-(defun svn-svk-status-rm (force)
-  "Implementation of `svn-status-rm' for the SVK backend."
-  (let* ((file-names (svn-status-marked-file-names))
-         (num-of-files (length file-names)))
-    (when (yes-or-no-p
-           (if (= 1 num-of-files)
-               (format "Remove %s? " (car file-names))
-             (format "Remove %d files? " num-of-files)))
-      (message "removing: %s" (mapconcat 'identity file-names ", "))
-      (svn-svk-run t t 'rm "rm" "--" file-names))))
+(defun svn-svk-status-get-specific-revision-internal (line-infos revision)
+  "Implementation of `svn-status-get-specific-revision-internal' for the SVN backend."
+  ;; In `svn-status-show-svn-diff-internal', there is a comment
+  ;; that REVISION `nil' might mean omitting the -r option entirely.
+  ;; That doesn't seem like a good idea with svn cat.
+
+  (message "svn-status-get-specific-revision-internal: %S %S" line-infos revision)
+
+  (when (eq revision :ask)
+    (setq revision (svn-status-read-revision-string
+                    "Get files for version: " "PREV")))
+
+  (let ((count (length line-infos)))
+    (if (= count 1)
+        (let ((line-info (car line-infos)))
+          (message "Getting revision %s of %s"
+                   (if (eq revision :auto)
+                       (if (svn-status-line-info->update-available line-info)
+                           "HEAD" "BASE")
+                     revision)
+                   (svn-status-line-info->filename line-info)))
+      ;; We could compute "Getting HEAD of 8 files and BASE of 11 files"
+      ;; but that'd be more bloat than it's worth.
+      (message "Getting revision %s of %d files"
+               (if (eq revision :auto) "HEAD or BASE" revision)
+               count)))
+
+  (let ((svn-status-get-specific-revision-file-info '()))
+    (dolist (line-info line-infos)
+      (let* ((revision (if (eq revision :auto)
+                           (if (svn-status-line-info->update-available line-info)
+                               "HEAD" "BASE")
+                         revision))       ;must be a string by this point
+             (file-name (svn-status-line-info->filename line-info))
+             ;; If REVISION is e.g. "HEAD", should we find out the actual
+             ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
+             ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
+             ;; and if users often want to know the revision numbers of such
+             ;; files, they can use svn:keywords.
+             (file-name-with-revision (concat (file-name-nondirectory file-name) ".~" revision "~")))
+        ;; `add-to-list' would unnecessarily check for duplicates.
+        (push (cons file-name (concat (file-name-directory file-name) file-name-with-revision)) svn-status-get-specific-revision-file-info)
+        ;; (message "file-name-with-revision: %s %S" file-name-with-revision (file-exists-p file-name-with-revision))
+        (save-excursion
+          (if (or (not (file-exists-p file-name-with-revision)) ;; file does not exist
+                  (not (string= (number-to-string (string-to-number revision)) revision))) ;; revision is not a number
+              (progn
+                (message "getting revision %s for %s" revision file-name)
+                (let ((content
+                       (with-temp-buffer
+                         (progn
+                           (svn-svk-run nil t 'cat "cat" "-r" revision (file-name-nondirectory file-name))
+                           ;;todo: error processing
+                           ;;svn: Filesystem has no item
+                           ;;svn: file not found: revision `15', path `/trunk/file.txt'
+                           (insert-buffer-substring svn-process-buffer-name))
+                         (buffer-string))))
+                  (find-file file-name-with-revision)
+                  (setq buffer-read-only nil)
+                  (erase-buffer)  ;Widen, because we'll save the whole buffer.
+                  (insert content)
+                  (goto-char (point-min))
+                  (save-buffer)))
+            (find-file file-name-with-revision)))))
+    ;;(message "default-directory: %s revision-file-info: %S" default-directory svn-status-get-specific-revision-file-info)
+    (nreverse svn-status-get-specific-revision-file-info)))
 
 ;;; Aux. functions that will often avoid slow calls to svk.
 
@@ -290,70 +362,6 @@ subdirectory. That's for the full `svn-svk-registered' to decide."
   "Implementation of `svn-status-base-dir' for the SVK backend."
   (setq base-dir (or (and file (file-name-directory (concat file "/")))
                      (expand-file-name default-directory))))
-
-(defun svn-svk-status-get-specific-revision-internal (line-infos revision)
-  "Implementation of `svn-status-get-specific-revision-internal' for the SVN backend."
-  ;; In `svn-status-show-svn-diff-internal', there is a comment
-  ;; that REVISION `nil' might mean omitting the -r option entirely.
-  ;; That doesn't seem like a good idea with svn cat.
-  ;;
-  ;; TODO: Return the alist, instead of storing it in a variable.
-
-  (when (eq revision :ask)
-    (setq revision (svn-status-read-revision-string
-                    "Get files for version: " "PREV")))
-
-  (let ((count (length line-infos)))
-    (if (= count 1)
-        (let ((line-info (car line-infos)))
-          (message "Getting revision %s of %s"
-                   (if (eq revision :auto)
-                       (if (svn-status-line-info->update-available line-info)
-                           "HEAD" "BASE")
-                     revision)
-                   (svn-status-line-info->filename line-info)))
-      ;; We could compute "Getting HEAD of 8 files and BASE of 11 files"
-      ;; but that'd be more bloat than it's worth.
-      (message "Getting revision %s of %d files"
-               (if (eq revision :auto) "HEAD or BASE" revision)
-               count)))
-
-  (setq svn-status-get-specific-revision-file-info '())
-  (dolist (line-info line-infos)
-    (let* ((revision (if (eq revision :auto)
-                         (if (svn-status-line-info->update-available line-info)
-                             "HEAD" "BASE")
-                       revision))       ;must be a string by this point
-           (file-name (svn-status-line-info->filename line-info))
-           ;; If REVISION is e.g. "HEAD", should we find out the actual
-           ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
-           ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
-           ;; and if users often want to know the revision numbers of such
-           ;; files, they can use svn:keywords.
-           (file-name-with-revision (concat file-name ".~" revision "~")))
-      ;; `add-to-list' would unnecessarily check for duplicates.
-      (push (cons file-name file-name-with-revision)
-            svn-status-get-specific-revision-file-info)
-      (save-excursion
-        (let ((content
-               (with-temp-buffer
-                   (progn
-                     (svn-svk-run nil t 'cat "cat" "-r" revision file-name)
-                     ;;todo: error processing
-                     ;;svn: Filesystem has no item
-                     ;;svn: file not found: revision `15', path `/trunk/file.txt'
-                     (insert-buffer-substring "*svn-process*"))
-                 (buffer-string))))
-          (find-file file-name-with-revision)
-          (setq buffer-read-only nil)
-          (erase-buffer)  ;Widen, because we'll save the whole buffer.
-          (insert content)
-          (save-buffer)))))
-  (setq svn-status-get-specific-revision-file-info
-        (nreverse svn-status-get-specific-revision-file-info))
-  (message "svn-status-get-specific-revision-file-info: %S"
-           svn-status-get-specific-revision-file-info))
-
 
 (provide 'psvn-svk)
 
