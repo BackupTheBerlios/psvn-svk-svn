@@ -5,9 +5,6 @@
 
 ;; TODO ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; * implement status-get-specific-revision-internal; it's needed so that
-;;   svn-status-get-specific-revision, svn-status-ediff-with-revision et al. can
-;;   work
 ;; * 'svn export' has no SVK equivalent; emulate it?
 ;; * 'svnversion' has no SVK equivalent; emulate it?
 ;; * svn-svk-status-base-dir: find the base checkout dir instead of cheating
@@ -275,6 +272,70 @@ subdirectory. That's for the full `svn-svk-registered' to decide."
   "Implementation of `svn-status-base-dir' for the SVK backend."
   (setq base-dir (or (and file (file-name-directory (concat file "/")))
                      (expand-file-name default-directory))))
+
+(defun svn-svk-status-get-specific-revision-internal (line-infos revision)
+  "Implementation of `svn-status-get-specific-revision-internal' for the SVN backend."
+  ;; In `svn-status-show-svn-diff-internal', there is a comment
+  ;; that REVISION `nil' might mean omitting the -r option entirely.
+  ;; That doesn't seem like a good idea with svn cat.
+  ;;
+  ;; TODO: Return the alist, instead of storing it in a variable.
+
+  (when (eq revision :ask)
+    (setq revision (svn-status-read-revision-string
+                    "Get files for version: " "PREV")))
+
+  (let ((count (length line-infos)))
+    (if (= count 1)
+        (let ((line-info (car line-infos)))
+          (message "Getting revision %s of %s"
+                   (if (eq revision :auto)
+                       (if (svn-status-line-info->update-available line-info)
+                           "HEAD" "BASE")
+                     revision)
+                   (svn-status-line-info->filename line-info)))
+      ;; We could compute "Getting HEAD of 8 files and BASE of 11 files"
+      ;; but that'd be more bloat than it's worth.
+      (message "Getting revision %s of %d files"
+               (if (eq revision :auto) "HEAD or BASE" revision)
+               count)))
+
+  (setq svn-status-get-specific-revision-file-info '())
+  (dolist (line-info line-infos)
+    (let* ((revision (if (eq revision :auto)
+                         (if (svn-status-line-info->update-available line-info)
+                             "HEAD" "BASE")
+                       revision))       ;must be a string by this point
+           (file-name (svn-status-line-info->filename line-info))
+           ;; If REVISION is e.g. "HEAD", should we find out the actual
+           ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
+           ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
+           ;; and if users often want to know the revision numbers of such
+           ;; files, they can use svn:keywords.
+           (file-name-with-revision (concat file-name ".~" revision "~")))
+      ;; `add-to-list' would unnecessarily check for duplicates.
+      (push (cons file-name file-name-with-revision)
+            svn-status-get-specific-revision-file-info)
+      (save-excursion
+        (let ((content
+               (with-temp-buffer
+                   (progn
+                     (svn-svk-run nil t 'cat "cat" "-r" revision file-name)
+                     ;;todo: error processing
+                     ;;svn: Filesystem has no item
+                     ;;svn: file not found: revision `15', path `/trunk/file.txt'
+                     (insert-buffer-substring "*svn-process*"))
+                 (buffer-string))))
+          (find-file file-name-with-revision)
+          (setq buffer-read-only nil)
+          (erase-buffer)  ;Widen, because we'll save the whole buffer.
+          (insert content)
+          (save-buffer)))))
+  (setq svn-status-get-specific-revision-file-info
+        (nreverse svn-status-get-specific-revision-file-info))
+  (message "svn-status-get-specific-revision-file-info: %S"
+           svn-status-get-specific-revision-file-info))
+
 
 (provide 'psvn-svk)
 
