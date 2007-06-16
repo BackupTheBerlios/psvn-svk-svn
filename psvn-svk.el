@@ -46,10 +46,28 @@ This can be either absolute or looked up on `exec-path'."
                    (and (= low1 low2)
                         (< micro1 micro2))))))))
 
+(defun svn-svk-emacs-assoc-default (key alist &optional test default)
+  "Find object KEY in a pseudo-alist ALIST.
+ALIST is a list of conses or objects.  Each element (or the element's car,
+if it is a cons) is compared with KEY by evaluating (TEST (car elt) KEY).
+If that is non-nil, the element matches;
+then `assoc-default' returns the element's cdr, if it is a cons,
+or DEFAULT if the element is not a cons.
+
+If no element matches, the value is nil.
+If TEST is omitted or nil, `equal' is used."
+  (let (found (tail alist) value)
+    (while (and tail (not found))
+      (let ((elt (car tail)))
+	(when (funcall (or test 'equal) (if (consp elt) (car elt) elt) key)
+	  (setq found t value (if (consp elt) (cdr elt) default))))
+      (setq tail (cdr tail)))
+    value))
+
 (if (fboundp 'assoc-string)
     (defalias 'svn-svk-assoc-string 'assoc-string)
   (defun svn-svk-assoc-string (key alist)
-    (assoc-default key alist
+    (svn-svk-emacs-assoc-default key alist
                    (lambda (a b)
                      (and (stringp a) (stringp b) (string-equal a b))))))
 
