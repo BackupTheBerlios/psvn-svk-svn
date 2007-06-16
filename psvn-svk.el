@@ -5,7 +5,7 @@
 
 ;; TODO ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; * 'svn export' has no SVK equivalent; emulate it?
+;; * 'svn export' equivalent with 'svk co'
 ;; * 'svnversion' has no SVK equivalent; emulate it?
 ;; * svn-svk-status-base-dir: find the base checkout dir instead of cheating
 ;; * svn-svk-status-show-svn-log should work on selected files
