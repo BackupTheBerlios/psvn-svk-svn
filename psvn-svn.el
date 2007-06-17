@@ -294,6 +294,32 @@
       (set-buffer svn-process-buffer-name)
       (svn-log-view-mode))))
 
+(defun svn-svn-status-version ()
+  "Show the version numbers for psvn.el and the svn command line client.
+The version number of the client is cached in `svn-client-version'."
+  (interactive)
+  (let ((window-conf (current-window-configuration))
+        (version-string))
+    (if (or (interactive-p) (not svn-status-cached-version-string))
+        (progn
+          (svn-svn-run nil t 'version "--version")
+          (when (interactive-p)
+            (svn-status-show-process-output 'info t))
+          (with-current-buffer svn-status-last-output-buffer-name
+            (goto-char (point-min))
+            (setq svn-client-version
+                  (when (re-search-forward "svn, version \\([0-9\.]+\\) " nil t)
+                    (mapcar 'string-to-number (split-string (match-string 1) "\\."))))
+            (let ((buffer-read-only nil))
+              (goto-char (point-min))
+              (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
+            (setq version-string (buffer-substring-no-properties (point-min) (point-max))))
+          (setq svn-status-cached-version-string version-string))
+      (setq version-string svn-status-cached-version-string)
+    (unless (interactive-p)
+      (set-window-configuration window-conf)
+      version-string))))
+
 (defun svn-svn-status-info ()
   "Run `svn info' on all selected files.
 See `svn-status-marked-files' for what counts as selected."

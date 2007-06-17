@@ -237,6 +237,32 @@ If TEST is omitted or nil, `equal' is used."
       (set-buffer svn-process-buffer-name)
       (svn-log-view-mode))))
 
+(defun svn-svk-status-version ()
+  "Show the version numbers for psvn.el and the svk command line client.
+The version number of the client is cached in `svn-client-version'."
+  (interactive)
+  (let ((window-conf (current-window-configuration))
+        (version-string))
+    (if (or (interactive-p) (not svn-status-cached-version-string))
+        (progn
+          (svn-svk-run nil t 'version "--version")
+          (when (interactive-p)
+            (svn-status-show-process-output 'info t))
+          (with-current-buffer svn-status-last-output-buffer-name
+            (goto-char (point-min))
+            (setq svn-client-version
+                  (when (re-search-forward "This is svk, version \\([0-9\.]+\\)." nil t)
+                    (mapcar 'string-to-number (split-string (match-string 1) "\\."))))
+            (let ((buffer-read-only nil))
+              (goto-char (point-min))
+              (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
+            (setq version-string (buffer-substring-no-properties (point-min) (point-max))))
+          (setq svn-status-cached-version-string version-string))
+      (setq version-string svn-status-cached-version-string)
+    (unless (interactive-p)
+      (set-window-configuration window-conf)
+      version-string))))
+
 (defun svn-svk-status-get-specific-revision-internal (line-infos revision)
   "Implementation of `svn-status-get-specific-revision-internal' for the SVN backend."
   ;; In `svn-status-show-svn-diff-internal', there is a comment
@@ -320,9 +346,9 @@ If TEST is omitted or nil, `equal' is used."
         (setq svn-svk-co-paths (list mtime))
         (with-temp-buffer
           (insert-file-contents config)
-          (when (search-forward "hash:\n" nil t) ; to start of co paths
+          (when (search-forward "hash:" nil t) ; to start of co paths
             (while (re-search-forward               ; to next co path
-                    "^ +\\(/.*\\):\n.*depotpath: \\(/.+\\)$" nil t)
+                    "^ +\\(/.*\\): *\n.*depotpath: \\(/.+\\)$" nil t)
               (add-to-list 'svn-svk-co-paths
                            (list (match-string-no-properties 1)
                                  (match-string-no-properties 2)))))))))

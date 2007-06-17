@@ -242,6 +242,7 @@
 ;; * run
 ;; * status
 ;; * status-base-dir
+;; * status-version
 ;; * status-show-svn-log
 ;; * status-parse-commit-output
 ;; * status-parse-ar-output
@@ -396,7 +397,7 @@ This can be either absolute or looked up on `exec-path'."
   :type 'file
   :group 'psvn)
 
-(defcustom svn-status-svn-environment-var-list '("LC_MESSAGES=C" "LC_ALL=")
+(defcustom svn-status-svn-environment-var-list '("LC_MESSAGES=C" "LC_ALL=" "LC_CTYPE=")
   "*A list of environment variables that should be set for that svn process.
 Each element is either a string \"VARIABLE=VALUE\" which will be added to
 the environment when svn is run, or just \"VARIABLE\" which causes that
@@ -1023,6 +1024,29 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
       "_svn"
     ".svn"))
 
+;; We need a notion of per-file properties because the version
+;; control state of a file is expensive to derive --- we compute
+;; them when the file is initially found, keep them up to date
+;; during any subsequent psvn operations, and forget them when
+;; the buffer is killed.
+
+(defvar svn-file-prop-obarray (make-vector 17 0)
+  "Obarray for per-file properties.")
+
+(defun svn-file-setprop (file property value)
+  "Set per-file VC PROPERTY for FILE to VALUE."
+  (put (intern file svn-file-prop-obarray) property value))
+
+(defun svn-file-getprop (file property)
+  "Get per-file VC PROPERTY for FILE."
+  (get (intern file svn-file-prop-obarray) property))
+
+(defun svn-file-clearprops (file)
+  "Clear all VC properties of FILE."
+  (setplist (intern file svn-file-prop-obarray) nil))
+
+;(svn-file-getprop "~/\.elisp/psvn/svn/" 'backend)
+
 ;;; backend dispatch functions
 ;; We keep properties on each symbol naming a backend as follows:
 ;;  * `svn-functions': an alist mapping svn-FUNCTION to svn-BACKEND-FUNCTION.
@@ -1261,6 +1285,7 @@ ARGLIST is flattened and any every nil value is discarded.
 If the variable `svn-status-edit-svn-command' is non-nil then the user
 can edit ARGLIST before running the backend.
 The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
+  (message "svn-run %s: %S" cmdtype arglist)
   (svn-call run nil run-asynchron clear-process-buffer cmdtype arglist))
 
 (defalias 'svn-run-svn 'svn-run)
@@ -3305,6 +3330,12 @@ The optional prefix argument ARG determines which switches are passed to `log':
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
   (svn-call status-show-svn-log nil arg))
+
+(defun svn-status-version ()
+  "Show the version numbers for psvn.el and the svn command line client.
+The version number of the client is cached in `svn-client-version'."
+  (interactive)
+  (svn-call status-version nil))
 
 (defun svn-status-info ()
   "Get version control information on all selected files.
@@ -5524,7 +5555,7 @@ working directory."
     (delete-region (point-min) (point-max))
     (insert "This buffer holds some debug informations for psvn.el\n")
     (insert "Please enter a description of the observed and the wanted behaviour\n")
-    (insert "and send it to the author (stefan@xsteve.at) to allow easier debugging\n\n")
+    (insert "and send it to the author (intrigeri@boum.org) to allow easier debugging\n\n")
     (insert "Revisions:\n")
     (svn-insert-indented-lines (svn-status-version))
     (insert "Language environment:\n")
