@@ -371,7 +371,7 @@ See `svn-status-marked-files' for what counts as selected."
              ;; and if users often want to know the revision numbers of such
              ;; files, they can use svn:keywords.
              (file-name-with-revision (concat (file-name-nondirectory file-name) ".~" revision "~"))
-             (default-directory (concat (svn-status-base-dir) (file-name-directory file-name))))
+             (default-directory (concat (svn-svn-status-base-dir) (file-name-directory file-name))))
         ;; `add-to-list' would unnecessarily check for duplicates.
         (push (cons file-name (concat (file-name-directory file-name) file-name-with-revision)) svn-status-get-specific-revision-file-info)
         ;; (message "file-name-with-revision: %s %S" file-name-with-revision (file-exists-p file-name-with-revision))
@@ -425,10 +425,10 @@ See `svn-status-marked-files' for what counts as selected."
   "Implementation of `svn-status-base-dir' for the SVN backend."
   (let* ((start-dir (expand-file-name (or start-directory default-directory)))
          (base-dir (gethash start-dir svn-status-base-dir-cache 'not-found)))
-    ;;(message "svn-status-base-dir: %S %S" start-dir base-dir)
+    (message "svn-svn-status-base-dir: %S %S" start-dir base-dir)
     (if (not (eq base-dir 'not-found))
         base-dir
-      ;; (message "calculating base-dir for %s" start-dir)
+      (message "calculating base-dir for %s" start-dir)
       (unless svn-client-version
         (svn-status-version))
       (let* ((base-dir start-dir)
@@ -438,7 +438,7 @@ See `svn-status-marked-files' for what counts as selected."
              (dir-below (expand-file-name base-dir)))
         ;; (message "repository-root: %s start-dir: %s" repository-root start-dir)
         (if (and (<= (car svn-client-version) 1) (< (cadr svn-client-version) 3))
-            (setq base-dir (svn-status-base-dir-for-ancient-svn-client start-dir)) ;; svn version < 1.3
+            (setq base-dir (svn-svn-status-base-dir-for-ancient-svn-client start-dir)) ;; svn version < 1.3
           (while (when (and dir-below (file-exists-p dot-svn-dir))
                    (setq base-dir (file-name-directory dot-svn-dir))
                    (string-match "\\(.+/\\).+/" dir-below)
@@ -452,7 +452,7 @@ See `svn-status-marked-files' for what counts as selected."
                        (setq dir-below nil)))))
           (setq base-dir (and in-tree base-dir)))
         (svn-puthash start-dir base-dir svn-status-base-dir-cache)
-        (svn-status-message 7 "svn-status-base-dir %s => %s" start-dir base-dir)
+        (svn-status-message 7 "svn-svn-status-base-dir %s => %s" start-dir base-dir)
         base-dir))))
 
 (provide 'psvn-svn)

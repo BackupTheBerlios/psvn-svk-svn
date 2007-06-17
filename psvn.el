@@ -1083,16 +1083,17 @@ It is usually called via the `svn-call' macro."
   (let ((f (assoc function-name (get backend 'svn-functions))))
     (svn-status-message 8 "svn-call-backend: applying %s (%s) for %s on args %S"
                         function-name f backend args)
-    (if f (setq f (cdr f))
+    (if f
+        (setq f (cdr f))
       (setq f (svn-find-backend-function backend function-name))
       (push (cons function-name f) (get backend 'svn-functions)))
     (cond
-     ((null f)
-      (error "Sorry, %s is not implemented for %s" function-name backend))
-     ((consp f)
-      (apply (car f) args))
-     (t
-      (apply f args)))))
+    ((null f)
+     (error "Sorry, %s is not implemented for %s" function-name backend))
+    ((consp f)
+     (apply (car f) args))
+    (t
+     (apply f args)))))
 
 (defmacro svn-call (fun file &rest args)
   ;; BEWARE!! `file' is evaluated twice
@@ -1114,28 +1115,30 @@ This function performs the check each time it is called.  To rely
 on the result of a previous call, use `svn-backend' instead.  If the
 file was previously registered under a certain backend, then that
 backend is tried first."
-  (let (handler)
-    (cond
-     ((and (boundp 'file-name-handler-alist)
-          (setq handler (find-file-name-handler file 'svn-registered)))
-      ;; handler should set svn-backend and return t if registered
-      (funcall handler 'svn-registered file))
-     (t
-      ;; There is no file name handler.
-      ;; Try svn-BACKEND-registered for each handled BACKEND.
-      (catch 'found
-	(let ((backend (svn-file-getprop file 'svn-backend)))
-	  (mapcar
-	   (lambda (b)
-	     (and (svn-call-backend b 'registered file)
-		  (svn-file-setprop file 'svn-backend b)
-		  (throw 'found t)))
-	   (if (or (not backend) (eq backend 'none))
-	       svn-handled-backends
-	     (cons backend svn-handled-backends))))
-        ;; File is not registered.
-        (svn-file-setprop file 'svn-backend 'none)
-        nil)))))
+  (if (not file)
+      nil
+    (let (handler)
+      (cond
+       ((and (boundp 'file-name-handler-alist)
+             (setq handler (find-file-name-handler file 'svn-registered)))
+        ;; handler should set svn-backend and return t if registered
+        (funcall handler 'svn-registered file))
+       (t
+        ;; There is no file name handler.
+        ;; Try svn-BACKEND-registered for each handled BACKEND.
+        (catch 'found
+          (let ((backend (svn-file-getprop file 'svn-backend)))
+            (mapcar
+             (lambda (b)
+               (and (svn-call-backend b 'registered file)
+                    (svn-file-setprop file 'svn-backend b)
+                    (throw 'found t)))
+             (if (or (not backend) (eq backend 'none))
+                 svn-handled-backends
+               (cons backend svn-handled-backends))))
+          ;; File is not registered.
+          (svn-file-setprop file 'svn-backend 'none)
+          nil))))))
 
 (defun svn-backend (file)
   "Return the version control type of FILE, nil if it is not registered."
@@ -1469,6 +1472,7 @@ To be run after a commit, an update or a merge."
         (when (not (buffer-modified-p))
           (let ((file (buffer-file-name)))
             (when file
+              (message "file: %s" file)
               (let ((root (svn-status-base-dir (file-name-directory file)))
                     (point-pos (point)))
                 (when (and root
@@ -5122,9 +5126,12 @@ You can send raw data to the process via \\[svn-process-send-string]."
 ;; --------------------------------------------------------------------------------
 
 (defun svn-status-base-dir (&optional start-directory)
-"Find the svn root directory for the current working copy.
+  "Find the svn root directory for the current working copy.
 Return nil, if not in a supported working copy."
-  (svn-call status-base-dir start-directory))
+  (let ((dir (or start-directory default-directory)))
+    (if (svn-registered dir)
+        (svn-call status-base-dir dir)
+      nil)))
 
 (defun svn-status-repo-for-path (directory)
   "Find the repository root for DIRECTORY."

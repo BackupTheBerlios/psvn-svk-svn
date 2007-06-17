@@ -132,7 +132,7 @@ If TEST is omitted or nil, `equal' is used."
           (setq mode-line-process 'svn-status-mode-line-process))
         (setq svn-status-pre-run-svn-buffer (current-buffer))
         (let* ((proc-buf (get-buffer-create svn-process-buffer-name))
-               (svn-exe svn-status-svn-executable)
+               (svn-exe svn-status-svk-executable)
                (svn-proc))
           (when (listp (car arglist))
             (setq arglist (car arglist)))
@@ -262,6 +262,7 @@ The version number of the client is cached in `svn-client-version'."
     (unless (interactive-p)
       (set-window-configuration window-conf)
       version-string))))
+;; (svn-svk-status-version)
 
 (defun svn-svk-status-get-specific-revision-internal (line-infos revision)
   "Implementation of `svn-status-get-specific-revision-internal' for the SVN backend."
