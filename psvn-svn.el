@@ -421,7 +421,7 @@ See `svn-status-marked-files' for what counts as selected."
 ;; status persistent options
 ;; --------------------------------------------------------------------------------
 
-(defun svn-svn-status-base-dir (&optional file)
+(defun svn-svn-status-base-dir (&optional start-directory)
   "Implementation of `svn-status-base-dir' for the SVN backend."
   (let* ((start-dir (expand-file-name (or start-directory default-directory)))
          (base-dir (gethash start-dir svn-status-base-dir-cache 'not-found)))
