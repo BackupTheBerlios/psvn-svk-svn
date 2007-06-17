@@ -203,6 +203,56 @@
 ;; (svn-status-parse-ar-output)
 ;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
 
+(defun svn-svn-status-parse-update-output ()
+  "Implementation of `svn-status-parse-update-output' for the SVN backend."
+  (save-excursion
+    (set-buffer svn-process-buffer-name)
+    (setq svn-status-update-rev-number nil)
+    (let ((action)
+          (name)
+          (skip)
+          (result))
+      (goto-char (point-min))
+      (while (< (point) (point-max))
+        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
+               (setq skip t))
+              ((looking-at "Updated to revision \\([0-9]+\\)")
+               (setq svn-status-update-rev-number
+                     (list t (string-to-number (svn-match-string-no-properties 1))))
+               (setq skip t))
+              ((looking-at "At revision \\([0-9]+\\)")
+               (setq svn-status-update-rev-number
+                     (list nil (string-to-number (svn-match-string-no-properties 1))))
+               (setq skip t))
+              ((looking-at "U")
+               (setq action 'updated))
+              ((looking-at "A")
+               (setq action 'added))
+              ((looking-at "D")
+               (setq skip t))
+               ;;(setq action 'deleted)) ;;deleted files are not displayed in the svn status output.
+              ((looking-at "C")
+               (setq action 'conflicted))
+              ((looking-at "G")
+               (setq action 'merged))
+
+              ((looking-at " U")
+               (setq action 'updated-props))
+
+              (t ;; this should never be needed(?)
+               (setq action (concat "parse-update: '"
+                                    (buffer-substring-no-properties (point) (+ 2 (point))) "'"))))
+        (unless skip ;found an interesting line
+          (forward-char 3)
+          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
+          (setq result (cons (list name action)
+                             result))
+          (setq skip nil))
+        (forward-line 1))
+      result)))
+;; (svn-status-parse-update-output)
+;; (svn-status-update-with-command-list (svn-status-parse-update-output))
+
 (defun svn-svn-status-parse-property-output ()
   "Implementation of `svn-status-parse-property-output' for the SVN backend."
   (save-excursion

@@ -2507,6 +2507,11 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
 Return a list that is suitable for `svn-status-update-with-command-list'"
   (svn-call status-parse-ar-output nil))
 
+(defun svn-status-parse-update-output ()
+  "Parse the output of svn update.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (svn-call status-parse-update-output nil))
+
 (defun svn-status-parse-property-output ()
   "Parse the output of a propset operation.
 Return a list that is suitable for `svn-status-update-with-command-list'"
