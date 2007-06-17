@@ -167,9 +167,6 @@
 ;; * have svn-examine work for SVK too
 ;; * multiple independent buffers in svn-status-mode
 ;; * SVK has no lock/unlock command
-;; * svn-process-filter should be backend-specific
-;; * log functions hardcode "Changed paths:" that may be svn-specific
-;; * svn-status-base-dir-for-ancient-svn-client should be backend-specific
 ;; There are "TODO" comments in other parts of this file as well.
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
