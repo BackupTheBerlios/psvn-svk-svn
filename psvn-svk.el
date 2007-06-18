@@ -351,8 +351,8 @@ The version number of the client is cached in `svn-client-version'."
             (while (re-search-forward               ; to next co path
                     "^ +\\(/.*\\): *\n.*depotpath: \\(/.+\\)$" nil t)
               (add-to-list 'svn-svk-co-paths
-                           (list (match-string-no-properties 1)
-                                 (match-string-no-properties 2)))))))))
+                           (list (svn-match-string-no-properties 1)
+                                 (svn-match-string-no-properties 2)))))))))
   svn-svk-co-paths)
 
 (defun svn-svk-co-path-p (file)
